@@ -19,7 +19,8 @@ EVAL_OBJ=evaluate.obj
 
 USE_DFPN=no
 
-OBJS=Gull.obj TT.obj evaluate.obj misc.obj uci.obj position.obj genmove.obj
+OBJS=Gull.obj TT.obj evaluate.obj misc.obj uci.obj position.obj genmove.obj \
+	search.obj
 
 CC=cl
 LD=link

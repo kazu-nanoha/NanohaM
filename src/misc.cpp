@@ -8,6 +8,7 @@ This software is released under the MIT License, see "LICENSE.txt".
 */
 
 #include <chrono>
+#include "misc.h"
 
 /*
  * Get the time in milliseconds.

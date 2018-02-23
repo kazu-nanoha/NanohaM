@@ -12,6 +12,7 @@ This software is released under the MIT License, see "LICENSE.txt".
 #include <cstring>
 #include "types.h"
 #include "TT.h"
+#include "search.h"
 #include "uci.h"
 
 void uci() {

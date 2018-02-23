@@ -9,14 +9,22 @@
 CC=g++
 
 TARGET=Nanoha.exe
-SRCS=Gull.cpp TT.cpp evaluate.cpp misc.cpp uci.cpp position.cpp genmove.cpp
-OBJS=Gull.o   TT.o   evaluate.o   misc.o   uci.o   position.o   genmove.o
+SRCS=Gull.cpp TT.cpp evaluate.cpp misc.cpp uci.cpp position.cpp genmove.cpp \
+	search.cpp
+OBJS=Gull.o   TT.o   evaluate.o   misc.o   uci.o   position.o   genmove.o \
+	search.o
 
 .cpp.o:
 	$(CC) -c $(CFLAGS) $<
 
 CFLAGS=-fno-exceptions -fno-rtti -Wno-parentheses -D_WIN32_WINNT=0x0601 -Wall -std=gnu++11 -mpopcnt
 STRIP=strip
+
+CFLAGS += -Weffc++ -Wenum-compare -Wfloat-equal -Wint-to-pointer-cast \
+	-Wmissing-braces -Wmissing-declarations -Wmissing-field-initializers \
+	-Wnarrowing -Wnon-virtual-dtor -Wshadow -Wswitch -Wswitch-default \
+	-Wswitch-enum -Wunused-local-typedefs -Wunused-macros -Wunused-result \
+	-Wwrite-strings -Wunused-function -Wunused-parameter -Wunused-value 
 
 ifeq ($(DEBUG),yes)
 	CFLAGS += -O0 -g

@@ -26,8 +26,8 @@ This software is released under the MIT License, see "LICENSE.txt".
 #define AddCaptureP(piece,from,to,flags) AddMove(from,to,flags,MvvLva[piece][Square(to)])
 #define AddHistoryP(piece,from,to,flags) AddMove(from,to,flags,HistoryP(piece,from,to))
 #define AddHistory(from,to) AddMove(from,to,0,History(from,to))
-#define AddDeltaP(piece,from,to,flags) AddMove(from,to,flags,Convert(DeltaScore(piece,from,to)+(int16_t)0x4000,int) << 16)
-#define AddDelta(from,to) AddMove(from,to,0,Convert(Delta(from,to)+(int16_t)0x4000,int) << 16)
+///#define AddDeltaP(piece,from,to,flags) AddMove(from,to,flags,Convert(DeltaScore(piece,from,to)+(int16_t)0x4000,int) << 16)
+///#define AddDelta(from,to) AddMove(from,to,0,Convert(Delta(from,to)+(int16_t)0x4000,int) << 16)
 #define AddCDeltaP(piece,from,to,flags) {if (DeltaScore(piece,from,to) >= Current->margin) AddMove(from,to,flags,Convert(DeltaScore(piece,from,to)+(int16_t)0x4000,int) << 16)}
 #define AddCDelta(from,to) {if (Delta(from,to) >= Current->margin) AddMove(from,to,0,Convert(Delta(from,to)+(int16_t)0x4000,int) << 16)}
 
@@ -47,16 +47,9 @@ This software is released under the MIT License, see "LICENSE.txt".
 
 #define FlagSort (1 << 0)
 #define FlagNoBcSort (1 << 1)
-// Memo: L436
-enum {
-	stage_search, s_hash_move, s_good_cap, s_special, s_quiet, s_bad_cap, s_none,
-	stage_evasion, e_hash_move, e_ev, e_none, 
-	stage_razoring, r_hash_move, r_cap, r_checks, r_none
-};
-#define StageNone ((1 << s_none) | (1 << e_none) | (1 << r_none))
 
+int16_t History[16 * 64]; 
 
-// Memo: L3016
 void sort(int * start, int * finish) {
 	for (int * p = start; p < finish - 1; p++) {
 		int * best = p;
@@ -88,9 +81,6 @@ int pick_move() {
 	return move & 0xFFFF;
 }
 
-
-
-// Memo: L3055
 template <bool me> void gen_next_moves() {
 	int *p, *q, *r;
 	Current->gen_flags &= ~FlagSort;
@@ -155,7 +145,6 @@ template <bool me> void gen_next_moves() {
 }
 
 
-// Memo: L3118
 template <bool me, bool root> int get_move() {
 	int move;
 	
@@ -182,7 +171,6 @@ start:
 	return move;
 }
 
-// Memo: L3144
 template <bool me> int see(int move, int margin) {
 	int from, to, piece, capture, delta, sq, pos;
 	uint64_t clear, def, att, occ, b_area, r_slider_att, b_slider_att, r_slider_def, b_slider_def, r_area, u, new_att, my_bishop, opp_bishop;
@@ -350,7 +338,6 @@ template <bool me> int see(int move, int margin) {
 	}
 }
 
-// Memo: L3311
 template <bool me> void gen_root_moves() {
 	int i, *p, killer, depth = -256, move;
 	GEntry * Entry;
@@ -396,7 +383,6 @@ keep_move:
 	*p = 0;
 }
 
-// Memo: L3356
 template <bool me> int * gen_captures(int * list) {
 	uint64_t u, v;
 
@@ -432,7 +418,6 @@ finish:
 	return list;
 }
 
-// Memo: L3391
 template <bool me> int * gen_evasions(int * list) {
 	int king, att_sq, from;
 	uint64_t att, esc, b, u;
@@ -499,7 +484,6 @@ template <bool me> int * gen_evasions(int * list) {
 	return list;
 }
 
-// Memo: L3457
 void mark_evasions(int * list) {
 	for (; T(*list); list++) {
 		register int move = (*list) & 0xFFFF;
@@ -513,7 +497,6 @@ void mark_evasions(int * list) {
 	}
 }
 
-// Memo: L3470
 template <bool me> int * gen_quiet_moves(int * list) {
 	int to;
 	uint64_t u, v, free, occ;
@@ -545,7 +528,6 @@ template <bool me> int * gen_quiet_moves(int * list) {
 	return list;
 }
 
-// Memo: L3501
 template <bool me> int * gen_checks(int * list) {
 	int king, from;
     uint64_t u, v, target, b_target, r_target, clear, xray;
@@ -589,7 +571,6 @@ template <bool me> int * gen_checks(int * list) {
 	return list;
 }
 
-// Memo: L3544
 template <bool me> int * gen_delta_moves(int * list) {
 	int to;
 	uint64_t u, v, free, occ;

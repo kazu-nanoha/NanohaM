@@ -15,7 +15,7 @@ This software is released under the MIT License, see "LICENSE.txt".
 #include "TT.h"
 
 namespace {
-	int date;
+///	int date;
 	constexpr int initial_hash_size = (1024 * 1024);
 }
 

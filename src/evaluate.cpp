@@ -667,7 +667,6 @@ template <bool HPopCnt> void eval_pawn_structure(GPawnEntry * PawnEntry) {
 }
 
 
-// Memo: L3016
 struct GEvalInfo {
 	int score, king_w, king_b, mul;
 	uint64_t occ, area_w, area_b, free_w, free_b;
@@ -680,7 +679,6 @@ struct GEvalInfo {
 // Memo: L862
 #define KingAttack Compose(1, 0)
 
-// Memo: L3025
 template <bool me, bool HPopCnt> void eval_queens(GEvalInfo &EI) {
 	uint64_t u, b;
 	for (u = Queen(me); T(u); u ^= b) {

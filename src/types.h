@@ -49,8 +49,9 @@ This software is released under the MIT License, see "LICENSE.txt".
 
 #define From(move) (((move) >> 6) & 0x3f)
 #define To(move) ((move) & 0x3f)
+#define SetScore(move,score) ((move) = (((move) & 0xFFFF) | ((score) << 16)))
 
-
+// Memo: L299
 #define BB(i) Board->bb[i]
 #define Pawn(me) (BB(WhitePawn | (me)))
 #define Knight(me) (BB(WhiteKnight | (me)))
@@ -203,12 +204,22 @@ constexpr uint64_t Line[8] = {Line0,(Line0<<8),(Line0<<16),(Line0<<24),(Line0<<3
 extern uint64_t Kpk[2][64][64]; 
 
 
-// ToDo : L408
+// Memo: L408
 #define MSBZ(x) ((x) ? msb(x) : 63)
 #define LSBZ(x) ((x) ? lsb(x) : 0)
 #define NB(me, x) ((me) ? msb(x) : lsb(x))
 #define NBZ(me, x) ((me) ? MSBZ(x) : LSBZ(x))
 
+// Memo: L427
+struct GPosData {
+	uint64_t key, pawn_key;
+	uint16_t move;
+	uint8_t turn, castle_flags, ply, ep_square, piece, capture;
+	uint8_t square[64];
+	int pst, material;
+};
+
+// Memo: L447
 extern int RootList[256];
 
 #define prefetch(a,mode) _mm_prefetch(a,mode)
@@ -244,7 +255,7 @@ extern uint64_t TurnKey;
 extern uint64_t PieceKey[16][64];
 extern uint64_t CastleKey[16];
 extern uint64_t EPKey[8];
-///extern uint16_t date;
+extern uint16_t date;
 
 
 // Memo: L510
@@ -264,23 +275,33 @@ extern GMaterial * Material;
 #define FlagCallEvalEndgame_b (1 << 3)
 
 
-
+// Memo: L530
+extern char info_string[1024];
+extern char pv_string[1024];
+extern char score_string[16];
 extern char mstring[65536];
+extern int MultiPV[256];
 
+// Memo: L538
+//int TimeLimit1, TimeLimit2, Console, HardwarePopCnt;
+extern int Console;
 
 extern int LastTime;
 ///extern int PVN, Stop, Print, Input = 1, PVHashing = 1, Infinite, MoveTime, SearchMoves, SMPointer, Ponder, Searching, Previous;
-extern int PVN, Stop, PVHashing, Infinite, SearchMoves, SMPointer, Ponder, Searching;
+extern int PVN, Stop, Print, PVHashing, Infinite, SearchMoves, SMPointer, Ponder, Searching, Previous;
 struct GSearchInfo {
 	int Bad, Change, Singular, Early, FailLow, FailHigh;
 };
 extern GSearchInfo CurrentSI[1], BaseSI[1];
 
 
-
+// Memo: L550
 extern int Aspiration, LargePages;
+#define TimeSingTwoMargin 20
+#define TimeSingOneMargin 30
 
 
+extern int64_t StartTime, InfoTime, CurrTime;
 extern uint16_t SMoves[256];	// ToDo: 256の意味
 extern jmp_buf Jump, ResetJump;
 
@@ -291,7 +312,7 @@ extern jmp_buf Jump, ResetJump;
 #define MaxPrN 32 // mustn't exceed 32
 
 //int PrN = 1, CPUs = 1, HT = 0, parent = 1, child = 0, WinParId, Id = 0, ResetHash = 1, NewPrN = 0;
-extern int PrN, CPUs, ResetHash, NewPrN;
+extern int PrN, CPUs, parent, Id, ResetHash, NewPrN;
 
 #define ArrayIndex(width,row,column) (((row) * (width)) + (column))
 #define Av(x,width,row,column) (*((x) + ArrayIndex(width,row,column)))
@@ -300,13 +321,13 @@ extern int PrN, CPUs, ResetHash, NewPrN;
 #define Sa(x,y) Av(x,0,0,y)
 #define Ca(x,y) Compose(Av(x,0,0,((y) * 2)),Av(x,0,0,((y) * 2)+1))
 
-// ToDo: L777
+// Memo: L777
 ///enum { PasserOnePiece, PasserOpKingControl, PasserOpMinorControl, PasserOpRookBlock };
 ///const int PasserSpecial[4] = { // tuner: type=array, var=100, active=0
 ///	0, 0, 0, 13
 ///};
 
-// L783
+// Memo: L783
 extern int PasserGeneral[8];
 extern int PasserBlocked[8];
 extern int PasserFree[8];
@@ -318,24 +339,28 @@ extern int PasserCandidate[8];
 extern int PasserClear[8];
 
 
-void init_search(int clear_hash);
 void setup_board();
 void get_board(const char fen[]);
+void move_to_string(int move, char string[]);
+int move_from_string(char string[]);
 
 
 void send_best_move();
 void get_position(char string[]);
 void get_time_limit(char string[]);
 int time_to_stop(GSearchInfo * SI, int time, int searching);
+void check_time(int searching);
+void check_time(int time, int searching);
+void check_state();
 
 
-// ToDo: L819
+// Memo: L819
 ///enum { TacticalMajorPawn, TacticalMinorPawn, TacticalMajorMinor, TacticalMinorMinor, TacticalThreat, TacticalDoubleThreat };
 ///const int Tactical[12] = { // tuner: type=array, var=20, active=0
 ///	-1, 5, 0, 5, 11, 29, 23, 32, 19, 11, 41, 12
 ///};
 
-// ToDo: L829
+// Memo: L829
 ///enum { PawnChainLinear, PawnChain, PawnBlocked, PawnFileSpan };
 ///const int PawnSpecial[8] = { // tuner: type=array, var=10, active=0
 ///	11, 9, 9, 4, 0, 9, 1, 1
@@ -350,8 +375,10 @@ extern GBoard Board[1];			// ToDo: DEL
 extern uint64_t Stack[2048];	// ToDo: DEL
 extern int sp, save_sp;			// ToDo: DEL
 //extern uint64_t nodes, check_node, check_node_smp;
-extern uint64_t nodes;
+extern uint64_t nodes, check_node, check_node_smp;
 
+#define FlagSort (1 << 0)
+#define FlagNoBcSort (1 << 1)
 struct GData {
 	uint64_t key, pawn_key, eval_key, att[2], patt[2], passer, xray[2], pin[2], threat, mask;
 	uint8_t turn, castle_flags, ply, ep_square, capture, gen_flags, piece, stage, mul, dummy;

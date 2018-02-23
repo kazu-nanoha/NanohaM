@@ -1,4 +1,4 @@
-/**
+﻿/**
 NanohaM, a USI shogi(Japanese-chess) playing engine, derived from Gull chess.
 The original Gull chess source code is "public domain".
 
@@ -10,11 +10,28 @@ This software is released under the MIT License, see "LICENSE.txt".
 #if !defined(GENMOVE_H_INCLUDED)
 #define GENMOVE_H_INCLUDED
 
+
+// Memo: L436
+enum {
+	stage_search, s_hash_move, s_good_cap, s_special, s_quiet, s_bad_cap, s_none,
+	stage_evasion, e_hash_move, e_ev, e_none, 
+	stage_razoring, r_hash_move, r_cap, r_checks, r_none
+};
+#define StageNone ((1 << s_none) | (1 << e_none) | (1 << r_none))
+
+
 // Memo: L488
 extern int16_t History[16 * 64]; 
 #define HistoryScore(piece,from,to) History[((piece) << 6) | (to)]
 #define HistoryP(piece,from,to) ((Convert(HistoryScore(piece,from,to) & 0xFF00,int)/Convert(HistoryScore(piece,from,to) & 0x00FF,int)) << 16)
 #define History(from,to) HistoryP(Square(from),from,to)
+#define HistoryM(move) HistoryScore(Square(From(move)),From(move),To(move))
+#define HistoryInc(depth) Min(((depth) >> 1) * ((depth) >> 1), 64)
+#define HistoryGood(move) if ((HistoryM(move) & 0x00FF) >= 256 - HistoryInc(depth)) \
+	HistoryM(move) = ((HistoryM(move) & 0xFEFE) >> 1) + ((HistoryInc(depth) << 8) | HistoryInc(depth)); \
+	else HistoryM(move) += ((HistoryInc(depth) << 8) | HistoryInc(depth))
+#define HistoryBad(move) if ((HistoryM(move) & 0x00FF) >= 256 - HistoryInc(depth)) \
+	HistoryM(move) = ((HistoryM(move) & 0xFEFE) >> 1) + HistoryInc(depth); else HistoryM(move) += HistoryInc(depth)
 
 
 // Memo: L505
