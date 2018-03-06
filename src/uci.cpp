@@ -12,6 +12,7 @@ This software is released under the MIT License, see "LICENSE.txt".
 #include <cstring>
 #include "types.h"
 #include "TT.h"
+#include "position.h"
 #include "search.h"
 #include "uci.h"
 
@@ -130,12 +131,12 @@ void uci() {
         }
 	} else if (!strcmp(mstring,"stop")) {
 		Stop = 1;
-		if (F(Searching)) send_best_move();
+		if (F(Searching)) send_best_move(root_pos);
 	} else if (!strcmp(mstring,"ponderhit")) {
 		Infinite = 0;
 		if (!RootList[1]) Stop = 1;
 		if (F(CurrentSI->Bad) && F(CurrentSI->FailLow) && time_to_stop(BaseSI, LastTime, 0)) Stop = 1;
-		if (F(Searching)) send_best_move();
+		if (F(Searching)) send_best_move(root_pos);
 	} else if (!strcmp(mstring, "quit")) {
 		// ToDo: 
 		for (i = 1; i < PrN; i++) {

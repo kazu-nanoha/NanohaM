@@ -2161,6 +2161,7 @@ void calc_material(int index) {
 
 	int special = 0;
 	for (me = 0; me < 2; me++) {
+		const int opp = (1 ^ me);
 		if (queens[me] == queens[opp]) {
 			if (rooks[me] - rooks[opp] == 1) {
 				if (knights[me] == knights[opp] && bishops[opp] - bishops[me] == 1) IncV(special, Ca(MatSpecial, MatRB));
@@ -2179,6 +2180,7 @@ void calc_material(int index) {
 	score += (Opening(special) * Material[index].phase + Endgame(special) * (128 - (int)Material[index].phase)) / 128;
 
 	for (me = 0; me < 2; me++) {
+		const int opp = (1 ^ me);
 		quad[me] += pawns[me] * (pawns[me] * TrAv(MatQuadMe, 5, 0, 0) + knights[me] * TrAv(MatQuadMe, 5, 0, 1)
 			+ bishops[me] * TrAv(MatQuadMe, 5, 0, 2) + rooks[me] * TrAv(MatQuadMe, 5, 0, 3) + queens[me] * TrAv(MatQuadMe, 5, 0, 4));
 		quad[me] += knights[me] * (knights[me] * TrAv(MatQuadMe, 5, 1, 0)
@@ -2199,6 +2201,7 @@ void calc_material(int index) {
 	score += (quad[White] - quad[Black]) / 100;
 
 	for (me = 0; me < 2; me++) {
+		const int opp = (1 ^ me);
 		if (tot[me] - tot[opp] <= 3) {
 			if (!pawns[me]) {
 				if (tot[me] <= 3) mul[me] = 0;
@@ -2250,6 +2253,7 @@ void calc_material(int index) {
 	else score = (score * mat[Black]) / 32;
 	Material[index].score = score;
 	for (me = 0; me < 2; me++) {
+		const int opp = (1 ^ me);
 		if (major[me] == 0 && minor[me] == bishops[me] && minor[me] <= 1) Material[index].flags |= VarC(FlagSingleBishop, me);
 		if (((major[me] == 0 || minor[me] == 0) && major[me] + minor[me] <= 1) || major[opp] + minor[opp] == 0
 			|| (!pawns[me] && major[me] == rooks[me] && major[me] == 1 && minor[me] == bishops[me] && minor[me] == 1 && rooks[opp] == 1 && !minor[opp] && !queens[opp])) Material[index].flags |= VarC(FlagCallEvalEndgame, me);
@@ -2494,6 +2498,7 @@ int move_from_string(char string[]) {
 ////void send_best_move() 
 
 void get_position(char string[]) {
+#if 0	// ToDo: ちゃんと考える。
 	const char * fen;
     char * moves;
     const char * ptr;
@@ -2529,6 +2534,7 @@ void get_position(char string[]) {
     }
 	memcpy(Stack, Stack + sp - Current->ply, (Current->ply + 1) * sizeof(uint64_t));
 	sp = Current->ply;
+#endif
 }
 
 void get_time_limit(char string[]) {
@@ -2716,6 +2722,7 @@ jump:
 	longjmp(Jump,1);
 }
 
+#if 0	// ToDo: ちゃんと考える。
 void check_state() {
 	GSP *Sp, *Spc;
 	int n, nc, score, best, pv, alpha, beta, new_depth, r_depth, ext, move, value;
@@ -2830,6 +2837,7 @@ start:
 	}
 	UNLOCK(Sp->lock);
 }
+#endif
 
 int input() {
 	if (child) return 0;
@@ -2840,6 +2848,8 @@ int input() {
         else return 1;
 	} else return 0;
 }
+
+#if 0
 void epd_test(const char string[], int time_limit) {
 	int n = 0, positions = 4000;
 	uint64_t all_nodes = 0, new_time, total_time;
@@ -2921,6 +2931,7 @@ void epd_test(const char string[], int time_limit) {
 	}
 	fclose(f);
 }
+#endif
 
 HANDLE CreateChildProcess(int child_id) {
 	char name[1024];
@@ -3040,7 +3051,10 @@ reset_jump:
 	if (ResetHash) TT.init();
 	init_search(0);
 
+
+#if 0	// ToDo: ちゃんと考える。
 	if (child) while (true) check_state();
+#endif
 	if (parent) for (i = 1; i < PrN; i++) ChildPr[i] = CreateChildProcess(i);
 
 #ifdef EXPLAIN_EVAL

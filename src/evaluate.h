@@ -38,11 +38,12 @@ extern int Pst[16 * 64];
 #define Pst(piece,sq) Pst[((piece) << 6) | (sq)]
 extern int MvvLva[16][16]; // [piece][capture]
 
-
-
 extern void print_eval();
 
 extern void init_eval();
-extern void evaluate();
+///extern void evaluate();
+
+class Position;
+extern void evaluate(Position& pos);
 
 #endif

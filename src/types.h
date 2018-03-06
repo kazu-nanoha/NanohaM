@@ -159,7 +159,7 @@ constexpr int MatCode[16] = {0,0,MatWP,MatBP,MatWN,MatBN,MatWL,MatBL,MatWD,MatBD
 constexpr uint64_t File[8] = {FileA,FileA<<1,FileA<<2,FileA<<3,FileA<<4,FileA<<5,FileA<<6,FileA<<7};
 constexpr uint64_t Line[8] = {Line0,(Line0<<8),(Line0<<16),(Line0<<24),(Line0<<32),(Line0<<40),(Line0<<48),(Line0<<56)};
 
-#define opp (1 ^ (me))
+///#define opp (1 ^ (me))
 
 #define IPawn(me) (WhitePawn | (me))
 #define IKnight(me) (WhiteKnight | (me))
@@ -211,6 +211,7 @@ extern uint64_t Kpk[2][64][64];
 #define NBZ(me, x) ((me) ? MSBZ(x) : LSBZ(x))
 
 // Memo: L427
+#if 0
 struct GPosData {
 	uint64_t key, pawn_key;
 	uint16_t move;
@@ -218,6 +219,7 @@ struct GPosData {
 	uint8_t square[64];
 	int pst, material;
 };
+#endif
 
 // Memo: L447
 extern int RootList[256];
@@ -338,14 +340,20 @@ extern int PasserOutside[8];
 extern int PasserCandidate[8];
 extern int PasserClear[8];
 
+// bitboard
+typedef uint64_t bitboard_t;
 
+
+//
 void setup_board();
 void get_board(const char fen[]);
 void move_to_string(int move, char string[]);
 int move_from_string(char string[]);
 
+// ToDo: 適切なところに移動。
+class Position;
+void send_best_move(Position& pos);
 
-void send_best_move();
 void get_position(char string[]);
 void get_time_limit(char string[]);
 int time_to_stop(GSearchInfo * SI, int time, int searching);
@@ -367,18 +375,19 @@ void check_state();
 ///};
 
 
-struct GBoard {
-	uint64_t bb[16];
-	uint8_t square[64];
-};
-extern GBoard Board[1];			// ToDo: DEL
-extern uint64_t Stack[2048];	// ToDo: DEL
-extern int sp, save_sp;			// ToDo: DEL
+//struct GBoard {
+//	uint64_t bb[16];
+//	uint8_t square[64];
+//};
+///extern GBoard Board[1];			// ToDo: DEL
+///extern uint64_t Stack[2048];	// ToDo: DEL
+///extern int sp, save_sp;			// ToDo: DEL
 //extern uint64_t nodes, check_node, check_node_smp;
 extern uint64_t nodes, check_node, check_node_smp;
 
 #define FlagSort (1 << 0)
 #define FlagNoBcSort (1 << 1)
+#if 0
 struct GData {
 	uint64_t key, pawn_key, eval_key, att[2], patt[2], passer, xray[2], pin[2], threat, mask;
 	uint8_t turn, castle_flags, ply, ep_square, capture, gen_flags, piece, stage, mul, dummy;
@@ -391,7 +400,7 @@ struct GData {
 };
 extern GData Data[128];	// [ToDo] 数値の意味を確認する.
 extern GData *Current;
-
+#endif
 extern const uint64_t BMagic[64];
 extern const uint64_t RMagic[64];
 extern const int32_t BShift[64];

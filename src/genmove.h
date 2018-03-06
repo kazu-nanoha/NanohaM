@@ -53,13 +53,40 @@ extern GRef * Ref = RefOne;
 #define UpdateCheckRef(ref_move) if (T(Current->move) && RefM(Current->move).check_ref[0] != (ref_move)) { \
 	RefM(Current->move).check_ref[1] = RefM(Current->move).check_ref[0]; RefM(Current->move).check_ref[0] = (ref_move); }
 
+constexpr int MAX_MOVES=230;	// 最大の合法手？
+
+class Position;
+class MoveList {
+	MoveList(const MoveList&) =delete;
+	MoveList& operator=(const MoveList&) = delete;
+public:
+	MoveList();
+	~MoveList();
+	int pick_move();
+	template <bool me> void gen_next_moves(Position& pos);
+	template <bool me, bool root> int get_move(Position& pos);
+	template <bool me> void gen_root_moves(Position& pos);
+	template <bool me> int * gen_captures(Position& pos, int * list);
+	template <bool me> int * gen_evasions(Position& pos, int * list);
+	void mark_evasions(Position& pos, int * list);
+	template <bool me> int * gen_quiet_moves(Position& pos, int * list);
+	template <bool me> int * gen_checks(Position& pos, int * list);
+	template <bool me> int * gen_delta_moves(Position& pos, int * list);
+private:
+	int stage;
+	uint8_t gen_flags;
+	uint16_t killers[3];	// killers[0]=hash_move, killers[1]=killer1, killers[2] = killer2
+	uint16_t ref[2];
+	int *start, *cur;
+	int moves[MAX_MOVES];
+};
 
 
 // Memo: L819
 int pick_move();
 template <bool me, bool root> int get_move();
 template <bool me> int see(int move, int margin);
-template <bool me> void gen_root_moves();
+///template <bool me> void gen_root_moves();
 template <bool me> int * gen_captures(int * list);
 template <bool me> int * gen_evasions(int * list);
 void mark_evasions(int * list);

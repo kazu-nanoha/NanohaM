@@ -11,7 +11,7 @@ This software is released under the MIT License, see "LICENSE.txt".
 #define SEARCH_H_INCLUDED
 
 // Memo: L403
-#define halt_check if ((Current - Data) >= 126) {evaluate(); return Current->score;} \
+#define halt_check if ((Current - Data) >= 126) {evaluate(pos); return Current->score;} \
     if (Current->ply >= 100) return 0; \
 	for (i = 4; i <= Current->ply; i+= 2) if (Stack[sp-i] == Current->key) return 0
 #define ExtFlag(ext) ((ext) << 16)
@@ -40,15 +40,17 @@ extern int64_t LastSpeed;
 // Memo: L804
 void init_search(int clear_hash);
 
+
+class Position;
 // Memo: L829
-template <bool me, bool pv> int q_search(int alpha, int beta, int depth, int flags);
-template <bool me, bool pv> int q_evasion(int alpha, int beta, int depth, int flags);
-template <bool me, bool exclusion> int search(int beta, int depth, int flags);
-template <bool me, bool exclusion> int search_evasion(int beta, int depth, int flags);
-template <bool me, bool root> int pv_search(int alpha, int beta, int depth, int flags);
+template <bool me, bool pv> int q_search(Position& pos, int alpha, int beta, int depth, int flags);
+template <bool me, bool pv> int q_evasion(Position& pos, int alpha, int beta, int depth, int flags);
+template <bool me, bool exclusion> int search(Position& pos, int beta, int depth, int flags);
+template <bool me, bool exclusion> int search_evasion(Position& pos, int beta, int depth, int flags);
+template <bool me, bool root> int pv_search(Position& pos, int alpha, int beta, int depth, int flags);
 template <bool me> void root();
 
-void send_pv(int depth, int alpha, int beta, int score);
-void send_multipv(int depth, int curr_number);
+void send_pv(Position& pos, int depth, int alpha, int beta, int score);
+void send_multipv(Position& pos, int depth, int curr_number);
 
 #endif
