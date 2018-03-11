@@ -10,8 +10,12 @@ This software is released under the MIT License, see "LICENSE.txt".
 #if !defined(THREAD_H_INCLUDED)
 #define THREAD_H_INCLUDED
 
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+
 // Memo: L721
-#define MaxSplitPoints 64 // mustn't exceed 64
+///#define MaxSplitPoints 64 // mustn't exceed 64
 
 struct GPos {
 	GPosData Position[1];
@@ -38,23 +42,36 @@ struct GSP {
 	GPos Pos[1];
 };
 
-struct GSMPI {
-	volatile long long nodes, active_sp, searching;
-#ifndef W32_BUILD
-	volatile long long stop, fail_high;
-#else
-	volatile long stop, fail_high;
-#endif
-	volatile int64_t hash_size;
-	volatile int PrN;
-	GSP Sp[MaxSplitPoints];
+///struct GSMPI {
+///	volatile long long nodes, active_sp, searching;
+///#ifndef W32_BUILD
+///	volatile long long stop, fail_high;
+///#else
+///	volatile long stop, fail_high;
+///#endif
+///	volatile int64_t hash_size;
+///	volatile int PrN;
+///	GSP Sp[MaxSplitPoints];
+///};
+
+class Thread {
+public:
+	Thread();
+	virtual ~Thread();
+	virtual void search();
+
+private:
+	std::thread thr;
+	std::mutex mtx;
+	std::condition_variable condi;
+	bool is_exit, is_searching, is_waiting;
 };
 
-#define SharedMaterialOffset (sizeof(GSMPI))
-#define SharedMagicOffset (SharedMaterialOffset + TotalMat * sizeof(GMaterial))
-#define SharedPVHashOffset (SharedMagicOffset + magic_size * sizeof(uint64_t))
+///#define SharedMaterialOffset (sizeof(GSMPI))
+///#define SharedMagicOffset (SharedMaterialOffset + TotalMat * sizeof(GMaterial))
+///#define SharedPVHashOffset (SharedMagicOffset + magic_size * sizeof(uint64_t))
 
-extern GSMPI * Smpi;
+///extern GSMPI * Smpi;
 
 
 // Memo: L770

@@ -39,13 +39,7 @@ struct GRef {
 	uint16_t ref[2];
 	uint16_t check_ref[2];
 };
-#ifndef TUNER
 extern GRef Ref[16 * 64];
-#else 
-extern GRef RefOne[16 * 64];
-extern GRef RefTwo[16 * 64];
-extern GRef * Ref = RefOne;
-#endif
 #define RefPointer(piece,from,to) Ref[((piece) << 6) | (to)]
 #define RefM(move) RefPointer(Square(To(move)),From(move),To(move))
 #define UpdateRef(ref_move) if (T(Current->move) && RefM(Current->move).ref[0] != (ref_move)) { \

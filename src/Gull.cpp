@@ -11,12 +11,6 @@
 #undef HNI
 #endif
 
-#define CPU_TIMING
-#undef CPU_TIMING
-
-#define TUNER
-#undef TUNER
-
 #include <iostream>
 #include <cmath>
 #include <cinttypes>
@@ -37,20 +31,6 @@
 #include "genmove.h"
 #include "search.h"
 #include "thread.h"
-#ifdef TUNER
-#include "time.h"
-//#define PGN
-#define RANDOM_SPHERICAL
-//#define WIN_PR
-//#define TIMING
-//#define RECORD_GAMES
-#endif
-
-#define EXPLAIN_EVAL
-#undef EXPLAIN_EVAL
-
-#define LARGE_PAGES
-//#undef LARGE_PAGES
 
 #define MP_NPS
 //#undef MP_NPS
@@ -59,106 +39,6 @@
 //#undef TIME_TO_DEPTH
 
 using namespace std;
-
-///#define Convert(x,type) ((type)(x))
-
-///#define Abs(x) ((x) > 0 ? (x) : (-(x)))
-///#define Sgn(x) ((x) == 0 ? 0 : ((x) > 0 ? 1 : (-1)))
-///#define Min(x,y) ((x) < (y) ? (x) : (y))
-///#define Max(x,y) ((x) > (y) ? (x) : (y))
-///#define Sqr(x) ((x) * (x))
-///#define T(x) ((x) != 0)
-///#define F(x) ((x) == 0)
-///#define Even(x) F((x) & 1)
-///#define Odd(x) T((x) & 1)
-///#define Combine(x,y) ((x) | ((y) << 16))
-///#define Compose(x,y) ((x) + ((y) << 16))
-///#define Compose16(x,y) Compose((x)/16,(y)/16)
-///#define Compose64(x,y) Compose((x)/64,(y)/64)
-///#define Compose256(x,y) Compose((x)/256,(y)/256)
-///#define Opening(x) Convert((x) & 0xFFFF,int16_t)
-///#define Endgame(x) ((((x) >> 15) & 1) + Convert((x) >> 16,int16_t))
-
-///#define File(x) ((x) & 7)
-///#define Rank(x) ((x) >> 3)
-///#define CRank(me,x) ((me) ? (7 - Rank(x)) : Rank(x))
-///#define NDiag(x) (7 - File(x) + Rank(x))
-///#define SDiag(x) (File(x) + Rank(x))
-///#define Dist(x,y) Max(Abs(Rank(x)-Rank(y)),Abs(File(x)-File(y)))
-///#define VarC(var,me) ((me) ? (var##_b) : (var##_w))
-///#define PVarC(prefix,var,me) ((me) ? (prefix.var##_b) : (prefix.var##_w))
-
-///#define Bit(x) (Convert(1,uint64_t) << (x))
-///#ifndef HNI
-///#define Cut(x) (x &= (x) - 1)
-///#else
-///#define Cut(x) (x = _blsr_u64(x))
-///#endif
-///#define Multiple(x) T((x) & ((x) - 1))
-///#define Single(x) F((x) & ((x) - 1))
-///#define Add(x,b) (x |= Bit(b))
-
-///#define From(move) (((move) >> 6) & 0x3f)
-///#define To(move) ((move) & 0x3f)
-///#define SetScore(move,score) ((move) = (((move) & 0xFFFF) | ((score) << 16)))
-///#define BitFrom(move) Bit(From(move))
-///#define BitTo(move) Bit(To(move))
-///#define MakeMove(from,to) ((from) << 6) | (to))
-///#define MakeMoveF(from,to,flags) ((from) << 6) | (to) | (flags))
-///#define MakeMoveFS(from,to,flags,score) ((from) << 6) | (to) | (flags) | (score))
-///#define PieceAtOrigin(move) Square(From(move))
-///#define Target(move) Square(To(move)) 
-
-///#define Empty Convert(0,uint64_t)
-///#define Filled (~Empty)
-///#define Interior Convert(0x007E7E7E7E7E7E00,uint64_t)
-///#define Boundary (~Interior)
-///#define WhiteArea Convert(0x00000000FFFFFFFF,uint64_t)
-///#define BlackArea (~WhiteArea)
-///#define LightArea Convert(0x55AA55AA55AA55AA,uint64_t)
-///#define DarkArea (~LightArea)
-///#define FileA Convert(0x0101010101010101,uint64_t)
-///#define Line0 Convert(0x00000000000000FF,uint64_t)
-
-///#define High32(x) ((x) >> 32)
-///#define Low32(x) Convert(x,uint32_t)
-
-///#define White 0
-///#define Black 1
-///#define WhitePawn 2
-///#define BlackPawn 3
-///#define WhiteKnight 4
-///#define BlackKnight 5
-///#define WhiteLight 6
-///#define BlackLight 7
-///#define WhiteDark 8
-///#define BlackDark 9
-///#define WhiteRook 10
-///#define BlackRook 11
-///#define WhiteQueen 12
-///#define BlackQueen 13
-///#define WhiteKing 14
-///#define BlackKing 15
-
-///#define IsSlider(x) T(0x3FC0 & Bit(x))
-
-///#define CanCastle_OO 1
-///#define CanCastle_oo 2
-///#define CanCastle_OOO 4
-///#define CanCastle_ooo 8
-
-///#define FlagCastling 0x1000
-///#define FlagEP 0x2000
-///#define FlagPKnight 0x4000
-///#define FlagPLight 0x6000
-///#define FlagPDark 0x8000
-///#define FlagPRook 0xA000
-///#define FlagPQueen 0xC000
-
-///#define IsPromotion(move) T((move) & 0xC000)
-///#define IsCastling(move) T((move) & 0x1000)
-///#define IsEP(move) (((move) & 0xF000) == 0x2000)
-///#define Promotion(move,side) ((side) + (((move) & 0xF000) >> 12))
 
 #if 0	// ToDo: DEL
 constexpr uint8_t UpdateCastling[64] =
@@ -286,84 +166,6 @@ const uint64_t File[8] = {FileA,FileA<<1,FileA<<2,FileA<<3,FileA<<4,FileA<<5,Fil
 const uint64_t Line[8] = {Line0,(Line0<<8),(Line0<<16),(Line0<<24),(Line0<<32),(Line0<<40),(Line0<<48),(Line0<<56)};
 #endif
 
-///#define opp (1 ^ (me))
-///
-///#define IPawn(me) (WhitePawn | (me))
-///#define IKnight(me) (WhiteKnight | (me))
-///#define ILight(me) (WhiteLight | (me))
-///#define IDark(me) (WhiteDark | (me))
-///#define IRook(me) (WhiteRook | (me))
-///#define IQueen(me) (WhiteQueen | (me))
-///#define IKing(me) (WhiteKing | (me))
-
-///#define BB(i) Board->bb[i]
-///#define Pawn(me) (BB(WhitePawn | (me)))
-///#define Knight(me) (BB(WhiteKnight | (me)))
-///#define Bishop(me) (BB(WhiteLight | (me)) | BB(WhiteDark | (me)))
-///#define Rook(me) (BB(WhiteRook | (me)))
-///#define Queen(me) (BB(WhiteQueen | (me)))
-///#define King(me) (BB(WhiteKing | (me)))
-///#define Piece(me) (BB(me))
-///#define NonPawn(me) (Piece(me) ^ Pawn(me))
-///#define NonPawnKing(me) (NonPawn(me) ^ King(me))
-///#define BSlider(me) (Bishop(me) | Queen(me))
-///#define RSlider(me) (Rook(me) | Queen(me))
-///#define Major(me) RSlider(me)
-///#define Minor(me) (Knight(me) | Bishop(me))
-///#define Slider(me) (BSlider(me) | RSlider(me))
-///#define PieceAll (Piece(White) | Piece(Black))
-///#define SliderAll (Slider(White) | Slider(Black))
-///#define PawnAll (Pawn(White) | Pawn(Black))
-///#define NonPawnKingAll (NonPawnKing(White) | NonPawnKing(Black))
-///#define KingPos(me) (lsb(King(me)))
-
-///#define ShiftNW(target) (((target) & (~(File[0] | Line[7]))) << 7)
-///#define ShiftNE(target) (((target) & (~(File[7] | Line[7]))) << 9)
-///#define ShiftSE(target) (((target) & (~(File[7] | Line[0]))) >> 7)
-///#define ShiftSW(target) (((target) & (~(File[0] | Line[0]))) >> 9)
-///#define ShiftW(me,target) ((me) ? ShiftSW(target) : ShiftNW(target))
-///#define ShiftE(me,target) ((me) ? ShiftSE(target) : ShiftNE(target))
-///#define ShiftN(target) ((target) << 8)
-///#define ShiftS(target) ((target) >> 8)
-///#define Shift(me,target) ((me) ? ShiftS(target) : ShiftN(target))
-///#define PushW(me) ((me) ? (-9) : (7))
-///#define PushE(me) ((me) ? (-7) : (9))
-///#define Push(me) ((me) ? (-8) : (8))
-///#define Dir(me) ((me) ? (-1) : (1))
-///#define IsGreater(me,x,y) ((me) ? ((x) < (y)) : ((x) > (y)))
-
-///#define Line(me,n) ((me) ? Line[7 - n] : Line[n])
-///#define Square(sq) Board->square[sq]
-///#define AddMove(from,to,flags,score) { *list = ((from) << 6) | (to) | (flags) | (score); list++; }
-///#define AddCapture(from,to,flags) AddMove(from,to,flags,MvvLva[Square(from)][Square(to)])
-///#define AddCaptureP(piece,from,to,flags) AddMove(from,to,flags,MvvLva[piece][Square(to)])
-///#define AddHistoryP(piece,from,to,flags) AddMove(from,to,flags,HistoryP(piece,from,to))
-///#define AddHistory(from,to) AddMove(from,to,0,History(from,to))
-///#define AddDeltaP(piece,from,to,flags) AddMove(from,to,flags,Convert(DeltaScore(piece,from,to)+(int16_t)0x4000,int) << 16)
-///#define AddDelta(from,to) AddMove(from,to,0,Convert(Delta(from,to)+(int16_t)0x4000,int) << 16)
-///#define AddCDeltaP(piece,from,to,flags) {if (DeltaScore(piece,from,to) >= Current->margin) AddMove(from,to,flags,Convert(DeltaScore(piece,from,to)+(int16_t)0x4000,int) << 16)}
-///#define AddCDelta(from,to) {if (Delta(from,to) >= Current->margin) AddMove(from,to,0,Convert(Delta(from,to)+(int16_t)0x4000,int) << 16)}
-
-///#define Check(me) T(Current->att[(me) ^ 1] & King(me))
-///#define IsIllegal(me,move) ((T(Current->xray[opp] & Bit(From(move))) && F(Bit(To(move)) & FullLine[lsb(King(me))][From(move)])) 
-///	|| (IsEP(move) && T(Line[Rank(From(move))] & King(me)) && T(Line[Rank(From(move))] & Major(opp)) && 
-///	T(RookAttacks(lsb(King(me)),PieceAll ^ Bit(From(move)) ^ Bit(Current->ep_square - Push(me))) & Major(opp))))
-///#define IsRepetition(margin,move) ((margin) > 0 && Current->ply >= 2 && (Current-1)->move == ((To(move) << 6) | From(move)) && F(Square(To(move))) && F((move) & 0xF000))
-
-#ifdef EXPLAIN_EVAL
-///FILE * fexplain;
-///int explain = 0, cpp_length;
-///char GullCppFile[16384][256];
-///#define IncV(var,x) (explain ? (me ? ((var -= (x)) && fprintf(fexplain,"(%d, %d): %s [Black]: %s",Opening(-(x)),Endgame(-(x)),__FUNCTION__,GullCppFile[Min(__LINE__-1,cpp_length)])) : ((var += (x)) && fprintf(fexplain,"(%d, %d): %s [White]: %s",Opening(x),Endgame(x),__FUNCTION__,GullCppFile[Min(__LINE__-1,cpp_length)]))) : (me ? (var -= (x)) : (var += (x))))
-#else
-///#define IncV(var,x) (me ? (var -= (x)) : (var += (x)))
-#endif
-///#define DecV(var,x) IncV(var,-(x))
-
-///#define KpkValue 300
-///#define EvalValue 30000
-///#define MateValue 32760
-
 /* 
 general move:
 0 - 11: from & to
@@ -489,13 +291,7 @@ uint16_t date;
 uint64_t Kpk[2][64][64]; 
 
 #if 0	// ToDo: DEL
-#ifndef TUNER
 int16_t History[16 * 64]; 
-#else
-int16_t HistoryOne[16 * 64]; 
-int16_t HistoryTwo[16 * 64]; 
-int16_t * History = HistoryOne;
-#endif
 #define HistoryScore(piece,from,to) History[((piece) << 6) | (to)]
 #define HistoryP(piece,from,to) ((Convert(HistoryScore(piece,from,to) & 0xFF00,int)/Convert(HistoryScore(piece,from,to) & 0x00FF,int)) << 16)
 #define History(from,to) HistoryP(Square(from),from,to)
@@ -508,23 +304,7 @@ int16_t * History = HistoryOne;
 	HistoryM(move) = ((HistoryM(move) & 0xFEFE) >> 1) + HistoryInc(depth); else HistoryM(move) += HistoryInc(depth)
 #endif
 
-///struct GRef {
-///	uint16_t ref[2];
-///	uint16_t check_ref[2];
-///};
-#ifndef TUNER
 GRef Ref[16 * 64];
-#else 
-///GRef RefOne[16 * 64];
-///GRef RefTwo[16 * 64];
-///GRef * Ref = RefOne;
-#endif
-///#define RefPointer(piece,from,to) Ref[((piece) << 6) | (to)]
-///#define RefM(move) RefPointer(Square(To(move)),From(move),To(move))
-///#define UpdateRef(ref_move) if (T(Current->move) && RefM(Current->move).ref[0] != (ref_move)) { 
-///	RefM(Current->move).ref[1] = RefM(Current->move).ref[0]; RefM(Current->move).ref[0] = (ref_move); }
-///#define UpdateCheckRef(ref_move) if (T(Current->move) && RefM(Current->move).check_ref[0] != (ref_move)) { 
-///	RefM(Current->move).check_ref[1] = RefM(Current->move).check_ref[0]; RefM(Current->move).check_ref[0] = (ref_move); }
 
 uint64_t seed = 1;
 uint8_t PieceFromChar[256];
@@ -542,14 +322,7 @@ int DepthLimit, LastDepth, LastTime, LastValue, LastExactValue, PrevMove, InstCn
 int64_t LastSpeed;
 int PVN, Stop, Print, Input = 1, PVHashing = 1, Infinite, MoveTime, SearchMoves, SMPointer, Ponder, Searching, Previous;
 GSearchInfo CurrentSI[1], BaseSI[1];
-#ifdef CPU_TIMING
-int CpuTiming = 0, UciMaxDepth = 0, UciMaxKNodes = 0, UciBaseTime = 1000, UciIncTime = 5;
-int GlobalTime[2] = { 0, 0 };
-int GlobalInc[2] = { 0, 0 };
-int GlobalTurn = 0;
-#define CyclesPerMSec Convert(3400000, int64_t)
-#endif
-int Aspiration = 1, LargePages = 1;
+int Aspiration = 1;
 #define TimeSingTwoMargin 20
 #define TimeSingOneMargin 30
 #define TimeNoPVSCOMargin 60
@@ -578,38 +351,7 @@ const int8_t RankR[8] = {-3, -2, -1, 0, 1, 2, 3, 4};
 ///const int SeeValue[16] = {0, 0, 90, 90, 325, 325, 325, 325, 325, 325, 510, 510, 975, 975, 30000, 30000};
 const int PieceType[16] = {0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4, 5, 5};
 
-#ifndef TUNER
 #define V(x) (x)
-#else
-#define MaxVariables 1024
-int var_number, active_vars;
-struct GString {
-	char line[256];
-};
-GString SourceFile[1000], VarName[1000];
-int VarIndex[1000];
-int src_str_num = 0, var_name_num = 0;
-int Variables[MaxVariables];
-uint8_t Active[MaxVariables];
-double Var[MaxVariables], Base[MaxVariables], FE[MaxVariables], SE[MaxVariables], Grad[MaxVariables];
-#define V(x) Variables[x]
-double EvalOne[MaxVariables], EvalTwo[MaxVariables];
-int RecordGames = 0;
-char RecordString[65536], PosStr[256], *Buffer;
-FILE * frec;
-#endif
-#define GullCpp "C:/Users/Administrator/Documents/Visual Studio 2010/Projects/Gull/Gull/Gull.cpp"
-
-///#define ArrayIndex(width,row,column) (((row) * (width)) + (column))
-///#ifndef TUNER
-///#define Av(x,width,row,column) (*((x) + ArrayIndex(width,row,column)))
-///#else
-///#define Av(x,width,row,column) V((I##x) + ArrayIndex(width,row,column))
-///#endif
-///#define TrAv(x,w,r,c) Av(x,0,0,(((r)*(2*(w)-(r)+1))/2)+(c))
-
-///#define Sa(x,y) Av(x,0,0,y)
-///#define Ca(x,y) Compose(Av(x,0,0,((y) * 2)),Av(x,0,0,((y) * 2)+1))
 
 // EVAL WEIGHTS
 
@@ -706,86 +448,16 @@ const int PstQuadMixedWeights[24] = { // tuner: type=array, var=100, active=0
 
 // SMP
 
-///#define MaxPrN 1
-///#ifndef DEBUG
-///#ifndef TUNER
-///#undef MaxPrN
-///#ifndef W32_BUILD
-///#define MaxPrN 64 // mustn't exceed 64
-///#else
-///#define MaxPrN 32 // mustn't exceed 32
-///#endif
-///#endif
-///#endif
-
 int PrN = 1, CPUs = 1, HT = 0, parent = 1, child = 0, WinParId, Id = 0, ResetHash = 1, NewPrN = 0;
 HANDLE ChildPr[MaxPrN];
-///#define SplitDepth 10
-///#define SplitDepthPV 4
-///#define MaxSplitPoints 64 // mustn't exceed 64
-#if 0 // DEL
-struct GPos {
-	GPosData Position[1];
-	uint64_t stack[100];
-	uint16_t killer[16][2];
-	int sp, date;
-};
-#endif
 #define FlagClaimed (1 << 1)
 #define FlagFinished (1 << 2)
-#if 0	// DEL
-struct GMove {
-	volatile uint16_t move;
-	volatile uint8_t reduced_depth, research_depth, stage, ext, id, flags;
-};
 
-struct GSP {
-	volatile LONG lock;
-	volatile int claimed, active, finished, pv, move_number, current, depth, alpha, beta, singular, split, best_move, height; 
-	GMove move[128];
-	jmp_buf jump;
-	GPos Pos[1];
-};
+///GSMPI * Smpi;
 
-struct GSMPI {
-	volatile long long nodes, active_sp, searching;
-#ifndef W32_BUILD
-	volatile long long stop, fail_high;
-#else
-	volatile long stop, fail_high;
-#endif
-	volatile int64_t hash_size;
-	volatile int PrN;
-	GSP Sp[MaxSplitPoints];
-};
-
-#define SharedMaterialOffset (sizeof(GSMPI))
-#define SharedMagicOffset (SharedMaterialOffset + TotalMat * sizeof(GMaterial))
-#define SharedPVHashOffset (SharedMagicOffset + magic_size * sizeof(uint64_t))
-#endif
-GSMPI * Smpi;
-
-jmp_buf CheckJump;
+///jmp_buf CheckJump;
 
 HANDLE SHARED = NULL, HASH = NULL;
-
-///#ifndef W32_BUILD
-///#define SET_BIT(var,bit) (InterlockedOr(&(var),1 << (bit)))
-///#define SET_BIT_64(var,bit) (InterlockedOr64(&(var),Bit(bit)));
-///#define ZERO_BIT_64(var,bit) (InterlockedAnd64(&(var),~Bit(bit)));
-///#define TEST_RESET_BIT(var,bit) (InterlockedBitTestAndReset64(&(var),bit))
-///#define TEST_RESET(var) (InterlockedExchange64(&(var),0))
-///#else
-///#define SET_BIT(var,bit) (_InterlockedOr(&(var),1 << (bit)))
-///#define SET_BIT_64(var,bit) {if ((bit) < 32) _InterlockedOr((LONG*)&(var),1 << (bit)); else _InterlockedOr(((LONG*)(&(var))) + 1,1 << ((bit) - 32));}
-///#define ZERO_BIT_64(var,bit) {if ((bit) < 32) _InterlockedAnd((LONG*)&(var),~(1 << (bit))); else _InterlockedAnd(((LONG*)(&(var))) + 1,~(1 << ((bit) - 32)));}
-///#define TEST_RESET_BIT(var,bit) (InterlockedBitTestAndReset(&(var),bit))
-///#define TEST_RESET(var) (InterlockedExchange(&(var),0))
-///#endif
-///#define SET(var,value) (InterlockedExchange(&(var),value))
-
-///#define LOCK(lock) {while (InterlockedCompareExchange(&(lock),1,0)) _mm_pause();}
-///#define UNLOCK(lock) {SET(lock,0);}
 
 inline unsigned get_num_cpus(void) {
 	return std::thread::hardware_concurrency();
@@ -807,928 +479,19 @@ uint16_t rand16();
 uint64_t rand64();
 void init_pst();
 void init();
-///void init_search(int clear_hash);
 void setup_board();
 void get_board(const char fen[]);
-void move_to_string(int move, char string[]);
-int move_from_string(char string[]);
-///void pick_pv();
-///template <bool me> void do_move(int move);
-///template <bool me> void undo_move(int move);
-///void do_null();
-///void undo_null();
-///template <bool me> int is_legal(int move);
-///template <bool me> int is_check(int move);
-///void hash_high(int value, int depth);
-///void hash_low(int move, int value, int depth);
-///void hash_exact(int move, int value, int depth, int exclusion, int ex_depth, int knodes);
-///__forceinline int pick_move();
-///template <bool me, bool root> int get_move();
-///template <bool me> int see(int move, int margin);
-///template <bool me> void gen_root_moves();
-///template <bool me> int * gen_captures(int * list);
-///template <bool me> int * gen_evasions(int * list);
-///void mark_evasions(int * list);
-///template <bool me> int * gen_quiet_moves(int * list);
-///template <bool me> int * gen_checks(int * list);
-///template <bool me> int * gen_delta_moves(int * list);
-template <bool me, bool pv> int q_search(int alpha, int beta, int depth, int flags);
-template <bool me, bool pv> int q_evasion(int alpha, int beta, int depth, int flags);
-template <bool me, bool exclusion> int search(int beta, int depth, int flags);
-template <bool me, bool exclusion> int search_evasion(int beta, int depth, int flags);
-template <bool me, bool root> int pv_search(int alpha, int beta, int depth, int flags);
-template <bool me> void root();
-template <bool me> int multipv(int depth);
-///void send_pv(int depth, int alpha, int beta, int score);
-void send_multipv(int depth, int curr_number);
-///void send_best_move();
-///void get_position(char string[]);
-///void get_time_limit(char string[]);
-///int64_t get_time();
-///int time_to_stop(GSearchInfo * SI, int time, int searching);
-void check_time(int searching);
-void check_time(int time, int searching);
-void check_state();
-int input();
-///void uci();
-
-#ifdef TUNER
-#ifndef RECORD_GAMES
-int ResignThreshold = 150;
-#else
-int ResignThreshold = 1500;
-#endif
-
-typedef struct {
-	int wins, draws, losses;
-} GMatchInfo;
-GMatchInfo MatchInfo[1] = {(0, 0, 0)};
-
-char Fen[65536][128];
-int opening_positions = 0;
-
-int Client = 0, Server = 0, Local = 1, cmd_number = 0;
-int generation = 0;
-
-#ifdef PGN
-struct GPos {
-	uint64_t bb[6]; // white, black, pawns, minor, major, queens and knights
-	uint8_t ep_square, turn, ply, castle_flags;
-};
-GPos Pos[65536];
-int pgn_positions = 0;
-
-void position_to_pos(GPos * pos) {
-	pos->bb[0] = Piece(White);
-	pos->bb[1] = Piece(Black);
-	pos->bb[2] = PawnAll;
-	pos->bb[3] = Minor(White) | Minor(Black);
-	pos->bb[4] = Major(White) | Major(Black);
-	pos->bb[5] = Queen(White) | Queen(Black) | Knight(White) | Knight(Black);
-	pos->ep_square = Current->ep_square;
-	pos->turn = Current->turn;
-	pos->castle_flags = Current->castle_flags;
-}
-
-void position_from_pos(GPos * pos) {
-	Current = Data;
-	memset(Board, 0, sizeof(GBoard));
-	memset(Current, 0, sizeof(GData));
-	BB(White) = pos->bb[0];
-	BB(Black) = pos->bb[1];
-	for (int me = 0; me < 2; me++) {
-		BB(me) = pos->bb[me];
-		BB(IPawn(me)) = pos->bb[2] & BB(me);
-		BB(IKnight(me)) = pos->bb[3] & pos->bb[5] & BB(me);
-		BB(ILight(me)) = pos->bb[3] & (~pos->bb[5]) & LightArea & BB(me);
-		BB(IDark(me)) = pos->bb[3] & (~pos->bb[5]) & DarkArea & BB(me);
-		BB(IRook(me)) = pos->bb[4] & (~pos->bb[5]) & BB(me);
-		BB(IQueen(me)) = pos->bb[4] & pos->bb[5] & BB(me);
-		BB(IKing(me)) = BB(me) & (~(pos->bb[2] | pos->bb[3] | pos->bb[4]));
-	}
-	for (int i = 2; i < 16; i++) for (uint64_t u = BB(i); u; Cut(u)) Square(lsb(u)) = i;
-	Current->ep_square = pos->ep_square;
-	Current->ply = pos->ply;
-	Current->castle_flags = pos->castle_flags;
-	Current->turn = pos->turn;
-	setup_board();
-}
-
-int pos_shelter_tune() {
-	if (!Queen(White) || !Queen(Black)) return 0;
-	if (popcnt(NonPawnKingAll) < 10) return 0;
-	if (Current->castle_flags) return 0;
-	if (File(lsb(King(White))) <= 2 && File(lsb(King(Black))) >= 5) return 1;
-	if (File(lsb(King(White))) >= 5 && File(lsb(King(Black))) <= 2) return 1;
-	return 0;
-}
-int pos_passer_tune() {
-	if (Current->passer) return 1;
-	return 0;
-}
-#endif
-
-void init_openings() {
-	FILE * ffen = NULL;
-	ffen = fopen("8moves.epd","r");
-	if (ffen != NULL) {
-		for (int i = 0; i < 65536; i++) {
-			fgets(Fen[i],128,ffen);
-			if (feof(ffen)) {
-				opening_positions = Max(opening_positions - 1, 0);
-				break;
-			} else opening_positions++;
-		}
-	} else {
-		fprintf(stdout,"File '8moves.epd' not found\n");
-		exit(0);
-		goto no_fen;
-	}
-	fclose(ffen);
-no_fen:
-	if (opening_positions == 0) {
-		sprintf(Fen[0],"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\n");
-		opening_positions = 1;
-	}
-#ifdef PGN
-	FILE * fpgn = fopen("uci_games.pgn", "r");
-	if (fpgn == NULL) {
-		fprintf(stdout, "File 'uci_games.pgn' not found\n");
-		exit(0);
-	}
-	while (pgn_positions < 65536) {
-		fgets(mstring, 65536, fpgn);
-		if (feof(fpgn)) {
-			pgn_positions = Max(pgn_positions - 1, 0);
-			break;
-		}
-		if (strstr(mstring, "FEN")) get_board(mstring + 6);
-		if (strchr(mstring, '[')) continue;
-		if (strlen(mstring) < 100) continue;
-		char * ptr = mstring;
-		while (*ptr != 0) {
-			evaluate();
-			if (pos_passer_tune()) {
-				position_to_pos(&Pos[pgn_positions++]);
-				break;
-			}
-			pv_string[0] = *ptr++;
-			pv_string[1] = *ptr++;
-			pv_string[2] = *ptr++;
-			pv_string[3] = *ptr++;
-			if (*ptr == 0 || *ptr == ' ') pv_string[4] = 0;
-			else {
-				pv_string[4] = *ptr++;
-				pv_string[5] = 0;
-			}
-			if (pv_string[0] == '1' || pv_string[0] == '0') break;
-			int move = move_from_string(pv_string);
-			if (Current->turn) {
-				if (!is_legal<1>(move)) break;
-				do_move<1>(move);
-			} else {
-				if (!is_legal<0>(move)) break;
-				do_move<0>(move);
-			}
-			memcpy(Data, Current, sizeof(GData));
-			Current = Data;
-			while (*ptr == ' ') ptr++;
-		}
-	}
-	fclose(fpgn);
-	fprintf(stdout, "%d PGN positions\n", pgn_positions);
-#endif
-}
-void init_variables() {
-	int i, j, k, start = 0;
-	FILE * f;
-
-	if (Local) f = fopen(GullCpp, "r");
-	else if (Server) f = fopen("./Server/Gull.cpp", "r");
-	else f = fopen("./Client/Gull.cpp", "r");
-	while (!feof(f)) {
-		(void)fgets(mstring, 256, f);
-		if (!start && memcmp(mstring, "// tuner: start", 15)) continue;
-		start = 1;
-		if (!memcmp(mstring, "// tuner: stop", 14)) break;
-		memcpy(SourceFile[src_str_num].line, mstring, 256);
-		src_str_num++;
-	}
-	fclose(f);
-
-	var_number = 0;
-	active_vars = 0;
-
-	int curr_ind = -1, active, indexed[MaxVariables];
-	double var;
-	char *p, *q;
-	memset(VarName, 0, 1000 * sizeof(GString)); memset(indexed, 0, MaxVariables * sizeof(int));
-	for (i = 0; i < src_str_num; i++) {
-		if (!strstr(SourceFile[i].line, "tuner: enum")) continue;
-		for (i++; !strstr(SourceFile[i].line, "};"); i++) {
-			p = strchr(SourceFile[i].line, 'I') + 1;
-			strcpy(VarName[var_name_num].line, p);
-			for (j = 0; VarName[var_name_num].line[j] >= '0' && VarName[var_name_num].line[j] <= 'z'; j++);
-			VarName[var_name_num].line[j] = '\n';
-			for (k = j + 1; k < 1000; k++) VarName[var_name_num].line[k] = 0;
-			q = strchr(p, '+');
-			if (q != NULL) curr_ind += atoi(q + 1);
-			else curr_ind++;
-			VarIndex[var_name_num] = curr_ind;
-			var_name_num++;
-		}
-		break;
-	}
-	for (i = 0; i < src_str_num; i++) {
-		if (!(p = strstr(SourceFile[i].line, "tuner:"))) continue;
-		q = strstr(p, "type="); if (q == NULL) continue; q += 5;
-		p = strstr(q, "active=");
-		if (p == NULL) active = 1;
-		else active = atoi(p + 7);
-		uint8_t active_mask[1024];
-		memset(active_mask, 1, 1024);
-		if (p = strstr(q, "mask=")) {
-			p += 5;
-			j = 0;
-			while (p[0] != ' ') {
-				int value = 0; if (p[0] == 's') value = 1;
-				if (p[1] == '&') {
-					if (value == 1) break;
-					for (k = j; k < 1024; k++) active_mask[k] = 0;
-					break;
-				}
-				for (k = 0; k < p[1] - '0'; k++) active_mask[j + k] = value;
-				j += p[1] - '0';
-				p += 2;
-			}
-		}
-		p = strstr(q, "var=");
-		if (p == NULL) var = 1000.0;
-		else var = (double)atoi(p + 4);
-		if (!memcmp(q, "array", 5)) {
-			p = strstr(SourceFile[i].line, "int "); p += 4;
-			q = strchr(p, '[');
-			for (j = 0; j < var_name_num; j++) if (!memcmp(p, VarName[j].line, (int)(q - p))) break;
-			curr_ind = VarIndex[j];
-			fprintf(stdout, "Array (%d) active=%d var=%.2lf: %s", curr_ind, active, var, VarName[j].line);
-		}
-		i++;
-		memset(mstring, 0, strlen(mstring));
-		while (!strstr(SourceFile[i].line, "};")) {
-			strcat(mstring, SourceFile[i].line);
-			i++;
-		}
-		i--;
-		p = mstring - 1;
-		int cnt = 0;
-		do {
-			p++;
-			Variables[curr_ind] = atoi(p); var_number++;
-			if (indexed[curr_ind]) { fprintf(stdout, "index mismatch: %d (%s)\n", curr_ind, VarName[j].line); exit(0); }
-			indexed[curr_ind]++;
-			int activate = 0;
-			if (active && active_mask[cnt]) activate = 1;
-			if (activate) Var[active_vars] = var;
-			Active[curr_ind++] = activate; active_vars += activate; cnt++;
-		} while (p = strchr(p, ','));
-	}
-	for (i = 0; i < curr_ind; i++) if (!indexed[i]) { fprintf(stdout, "index skipped %d\n", i); exit(0); }
-	fprintf(stdout, "%d variables, %d active\n", var_number, active_vars);
-}
-void eval_to_cpp(const char * filename, double * list) {
-	FILE * f = fopen(filename, "w");
-	for (int i = 0; i < var_name_num; i++) VarName[i].line[strlen(VarName[i].line) - 1] = 0;
-	for (int i = 0; i < src_str_num; i++) {
-		fprintf(f, "%s", SourceFile[i].line);
-		if (!strstr(SourceFile[i].line, "type=array") || strstr(SourceFile[i].line, "active=0")) continue;
-		for (int j = 0; j < var_name_num; j++) if (strstr(SourceFile[i].line, VarName[j].line)) {
-			int n = 0;
-start:
-			i++;
-			fprintf(f, "    ");
-			int cnt = 0, index = 0; for (int k = 0; k < VarIndex[j]; k++) if (Active[k]) index++;
-			char * p = SourceFile[i].line, *end;
-			while ((p = strchr(p+1, ',')) != NULL) cnt++; if (end = strstr(SourceFile[i + 1].line, "};")) cnt++;
-			for (int k = 0; k < cnt; k++) {
-				fprintf(f, "%d", (int)list[index + (n++)]);
-				if (k + 1 < cnt) fprintf(f, ", ");
-				else if (end == NULL) fprintf(f, ",\n");
-				else fprintf(f, "\n");
-			}
-			if (end == NULL) goto start;
-		}
-	}
-	fclose(f);
-}
-double ratio_from_elo(double elo) { return 1.0 / (1.0 + exp(((-elo) / 400.0)*log(10.0))); }
-double elo_from_ratio(double ratio) { return -(log((1.0 / MinF(0.99999, Max(ratio, 0.00001))) - 1.0) / log(10.0)) * 400.0; }
-double rand_u() { return MinF(1.0, Max(0.0, ((double)((rand() << 15) | rand())) / (32768.0 * 32768.0))); }
-double gaussian(double mean, double sigma) { return sqrt(Max(0.0000001, -2.0 * log(Max(0.0000001, rand_u())))) * sin(2.0 * 3.14159265358979323846 * rand_u()) * sigma + mean; }
-void int_to_double(double * dst, int * src, int n) {for (int i = 0; i < n; i++) dst[i] = (double)src[i];}
-void double_to_int(int * dst, double * src, int n) {for (int i = 0; i < n; i++) dst[i] = (int)src[i];}
-void double_to_double(double * dst, double * src, int n) {for (int i = 0; i < n; i++) dst[i] = src[i];}
-void int_to_int(int * dst, int * src, int n) {for (int i = 0; i < n; i++) dst[i] = src[i];}
-double scalar(double * one, double * two, int n) {
-	double result = 0.0;
-	for (int i = 0; i < n; i++) result += one[i] * two[i];
-	return result;
-}
-void load_list(double * list) {
-	int i, j = 0;
-	for (i = 0; i < var_number; i++) if (Active[i]) Variables[i] = (int)list[j++];
-}
-void save_list(double * list) {
-	int i, j = 0;
-	for (i = 0; i < var_number; i++) if (Active[i]) list[j++] = (double)Variables[i];
-}
-void log_list(FILE * f, double * list, int n) {
-	fprintf(f,"(");
-	for (int i = 0; i < n; i++) {
-		fprintf(f,"%.2lf",list[i]);
-		if (i < n - 1) fprintf(f,",");
-	}
-	fprintf(f,")\n");
-}
-void log_list(const char * file_name, double * list, int n) {
-	FILE * f = fopen(file_name,"a");
-	log_list(f,list,n);
-	fclose(f);
-}
-void log_list(char * s, double * list, int n, bool precision) {
-	sprintf(s+strlen(s),"(");
-	for (int i = 0; i < n; i++) {
-		if (!precision) sprintf(s+strlen(s),"%.2lf",list[i]);
-		else sprintf(s+strlen(s),"%lf",list[i]);
-		if (i < n - 1) sprintf(s+strlen(s),",");
-	}
-	sprintf(s+strlen(s),") ");
-}
-void read_list(char * string, double * list, int n) {
-	int i = 0;
-	char * p = strchr(string,'(');
-	do {
-		p++;
-		list[i++] = atof(p);
-		if (i >= n) break;
-	} while (p = strchr(p,','));
-}
-void init_eval_data(double * one, double * two) {
-	if (one != EvalOne) double_to_double(EvalOne,one,var_number);
-	if (two != EvalTwo) double_to_double(EvalTwo,two,var_number);
-	load_list(one); Pst = PstOne; init_pst();
-	load_list(two); Pst = PstTwo; init_pst();
-}
-void load_eval(int first) {
-	int i;
-	generation++;
-	for (i = 1; i < 128; i++) Data[i].eval_key = 0;
-	if (first) {
-		load_list(EvalOne);
-		Hash = HashOne;
-		PawnHash = PawnHashOne;
-		PVHash = PVHashOne;
-		Pst = PstOne;
-		History = HistoryOne;
-		Delta = DeltaOne;
-		Ref = RefOne;
-	} else {
-		load_list(EvalTwo);
-		Hash = HashTwo;
-		PawnHash = PawnHashTwo;
-		PVHash = PVHashTwo;
-		Pst = PstTwo;
-		History = HistoryTwo;
-		Delta = DeltaTwo;
-		Ref = RefTwo;
-	}
-	Current->pst = 0;
-	for (i = 0; i < 64; i++) if (Square(i)) Current->pst += Pst(Square(i),i);
-	init_eval();
-}
-void compute_list(double * dst, double * base, double * dir, double * var, double a) {for (int i = 0; i < active_vars; i++) dst[i] = base[i] + dir[i] * var[i] * a;}
-void scale_list(double * list, double r) {
-	int i;
-	double x = 0.0;
-	for (i = 0; i < active_vars; i++) x += Sqr(list[i]);
-	x = r/sqrt(x);
-	for (i = 0; i < active_vars; i++) list[i] *= x; 
-}
-int play(int depth) {
-	LastDepth = TimeLimit1 = TimeLimit2 = 0;
-#ifdef TIMING
-	Infinite = 0;
-	int nmoves = MovesTg - 1;
-	if (Current->ply > 40) nmoves += Min(Current->ply - 40, (100 - Current->ply) / 2);
-	TimeLimit1 = Min(GlobalTime[GlobalTurn], (GlobalTime[GlobalTurn] + nmoves * GlobalInc[GlobalTurn]) / nmoves);
-	TimeLimit2 = Min(GlobalTime[GlobalTurn], (GlobalTime[GlobalTurn] + nmoves * GlobalInc[GlobalTurn]) / 3);
-	TimeLimit1 = Min(GlobalTime[GlobalTurn], (TimeLimit1 * TimeRatio) / 100);
-	DepthLimit = 128; Searching = 1; nodes = Stop = 0;
-	StartTime = get_time();
-#else
-	DepthLimit = 2 * depth + 2;
-	Infinite = 1;
-#endif
-	best_score = best_move = 0;
-	Print = 0;
-	if (Current->turn == White) root<0>(); else root<1>();
-	return best_score;
-}
-double play_game(double * one, double * two, int depth, char * fen) {
-	int i, cnt, sdepth, value, previous = 0, im = 0;
-	load_eval(0); init_search(1); load_eval(1); init_search(1);
-#ifndef PGN
-	get_board(fen);
-	if (RecordGames) {
-		RecordString[0] = 0;
-		for (cnt = 0; fen[cnt] != '\n'; cnt++) PosStr[cnt] = fen[cnt];
-		PosStr[cnt] = 0;
-	}
-#else
-	position_from_pos((GPos*)fen);
-#endif
-	init_eval_data(one,two); 
-
-#ifdef TIMING
-	GlobalTime[0] = GlobalTime[1] = Convert((1.0 + rand_u()) * (double)(1000 << (int)(depth)),int);
-	GlobalInc[0] = GlobalInc[1] = GlobalTime[0] / 200;
-#endif
-
-	for (cnt = 0; cnt < 200 + (RecordGames ? 200 : 0); cnt++) {
-		GlobalTurn = Even(cnt);
-		load_eval(GlobalTurn);
-		memcpy(Data, Current, sizeof(GData));
-		Current = Data;
-		if (Even(cnt)) sdepth = depth + Odd(rand16());
-		value = play(sdepth);
-		if (!best_move) goto loss;
-		if (value < -ResignThreshold && previous > ResignThreshold) goto loss;
-		if (!RecordGames) {
-			if (value == 0 && previous == 0 && cnt >= 60) goto draw;
-			if (Abs(value) <= 3 && Abs(previous) <= 3 && cnt >= 120) goto draw;
-		}
-		if (Current->ply >= 100) goto draw;
-		for (i = 4; i <= Current->ply; i += 2) if (Stack[sp - i] == Current->key) goto draw;
-		int me = 0;
-		if (!PawnAll) {
-			int my_score = 3 * popcnt(Minor(me)) + 5 * popcnt(Rook(me)) + 9 * popcnt(Queen(me));
-			int opp_score = 3 * popcnt(Minor(opp)) + 5 * popcnt(Rook(opp)) + 9 * popcnt(Queen(opp));
-			if (Abs(my_score - opp_score) <= 3 && Max(popcnt(NonPawnKing(me)),popcnt(NonPawnKing(opp))) <= 2) {
-				im++;
-				if (im >= 10 && Abs(value) < 50 && Abs(previous) < 50) goto draw; 
-			}
-		}
-#ifdef WIN_PR
-		if (cnt >= 6 && (
-			(!Queen(White) && !Queen(Black)) ||
-			(popcnt(NonPawnKing(White)) <= 2 && popcnt(NonPawnKing(Black)) <= 2) ||
-			(!Current->castle_flags && ((File[File(lsb(King(White)))] | PIsolated[File(lsb(King(White)))]) & King(Black)))
-			)) return ratio_from_elo(3.0 * (double)value) + ratio_from_elo(-3.0 * (double)previous);
-#endif
-		previous = value;
-		if (!Current->turn) do_move<0>(best_move);
-		else do_move<1>(best_move);
-		if (RecordGames) {
-			move_to_string(best_move, pv_string);
-			sprintf(RecordString + strlen(RecordString), "%s { %.2lf / %d } ", pv_string, (double)(Current->turn ? value : (-value)) / 100.0, LastDepth/2);
-		}
-	}
-draw:
-	if (RecordGames) sprintf(Buffer + strlen(Buffer), "[FEN \"%s\"]\n[Result \"1/2-1/2\"]\n%s\n", PosStr, RecordString);
-	return 1.0;
-loss:
-	if (Even(cnt)) {
-		if (RecordGames) {
-			if (Current->turn) sprintf(Buffer + strlen(Buffer), "[FEN \"%s\"]\n[Result \"1-0\"]\n%s\n", PosStr, RecordString);
-			else sprintf(Buffer + strlen(Buffer), "[FEN \"%s\"]\n[Result \"0-1\"]\n%s\n", PosStr, RecordString);
-		}
-		return 0.0;
-	} else {
-		if (RecordGames) {
-			if (Current->turn) sprintf(Buffer + strlen(Buffer), "[FEN \"%s\"]\n[Result \"1-0\"]\n%s\n", PosStr, RecordString);
-			else sprintf(Buffer + strlen(Buffer), "[FEN \"%s\"]\n[Result \"0-1\"]\n%s\n", PosStr, RecordString);
-		}
-		return 2.0;
-	}
-}
-double play_position(double * one, double * two, int depth, char * fen, GMatchInfo * MI) {
-	double result, score = 0.0;
-	result = play_game(one, two, depth, fen); if (result >= 1.98) MI->wins++; else if (result <= 0.02) MI->losses++; else MI->draws++;
-	score += result;
-	result = play_game(two, one, depth, fen); if (result >= 1.98) MI->losses++; else if (result <= 0.02) MI->wins++; else MI->draws++;
-	score += 2.0 - result;
-	return score;
-}
-double match(double * one, double * two, int positions, int depth, GMatchInfo * MI) {
-	double score = 0.0;
-	memset(MI,0,sizeof(GMatchInfo));
-	for (int i = 0; i < positions; i++) {
-#ifndef PGN
-		score += play_position(one, two, depth, Fen[rand64() % (uint64_t)opening_positions], MI);
-#else
-		score += play_position(one, two, depth, (char*)&Pos[rand64() % (uint64_t)pgn_positions], MI);
-#endif
-	}
-	return (25.0 * (double)score)/(double)(positions);
-}
-int match_los(double * one, double * two, int positions, int chunk_size, int depth, double high, double low, double uh, double ul, GMatchInfo * MI, bool print) {
-	int pos = 0;
-	double score, ratio, stdev, wins, draws, losses, total, tot_score = 0.0;
-	cmd_number++;
-
-	memset(mstring,0,strlen(mstring));
-	sprintf(mstring,"$ Number=%d Command=match Depth=%d Positions=%d",cmd_number,depth,chunk_size);
-	sprintf(mstring+strlen(mstring)," First="); log_list(mstring,one,active_vars,false);
-	sprintf(mstring+strlen(mstring)," Second="); log_list(mstring,two,active_vars,false);
-	fseek(stdin,0,SEEK_END);
-	fprintf(stdout,"%s\n",mstring);
-
-	memset(MI,0,sizeof(GMatchInfo));
-	while (pos < positions) {
-		pos += chunk_size;
-start:
-		fgets(mstring,65536,stdin);
-		char * p = strstr(mstring,"Number=");
-		if (p == NULL) goto start;
-		if (atoi(p+7) != cmd_number) goto start;
-		p = strstr(mstring, "Wins="); MI->wins += atoi(p + 5); 
-		p = strstr(mstring, "Draws="); MI->draws += atoi(p + 6); 
-		p = strstr(mstring, "Losses="); MI->losses += atoi(p + 7); 
-		p = strstr(mstring, "Result="); tot_score += atof(p + 7);
-
-		wins = (double)MI->wins; draws = (double)MI->draws; losses = (double)MI->losses; total = Max(wins + losses,1.0);
-#ifndef WIN_PR
-		score = (100.0 * wins + 50.0 * draws)/(total + draws);
-#else
-		score = tot_score / (double)(pos / chunk_size);
-#endif
-		if (print) fprintf(stdout,"%.2lf (%d positions played): %d-%d-%d\n",score,pos,MI->wins,MI->draws,MI->losses);
-		if (total <= 0.99) continue;
-		ratio = wins/total;
-		stdev = 0.5/sqrt(total);
-		if (high > 0.01) {
-			if (ratio >= 0.5 + stdev * high) return 1;
-#ifdef WIN_PR
-			if (score / 100.0 >= 0.5 + stdev * high) return 1;
-#endif
-		}
-		if (low > 0.01) {
-			if (ratio <= 0.5 - stdev * low) return -1;
-#ifdef WIN_PR
-			if (score / 100.0 <= 0.5 - stdev * low) return -1;
-#endif
-		}
-		if (pos >= positions) break;
-		double remaining = ((2.0 * (double)positions - total - draws) * (wins + losses)) / (total + draws);
-		double target_high = 0.5 * (1.0 + (high / sqrt(total + remaining)));
-		double target_low = 0.5 * (1.0 - (low / sqrt(total + remaining)));
-		double ratio_high = target_high + 0.5 * (uh / sqrt(remaining));
-		double ratio_low = target_low - 0.5 * (ul / sqrt(remaining));
-		if (uh > 0.01) if ((wins + ratio_high * remaining) / (total + remaining) < target_high) return -1;
-		if (ul > 0.01) if ((wins + ratio_low * remaining) / (total + remaining) > target_low) return 1;
-	}
-	return 0;
-}
-void gradient(double * base, double * var, int iter, int pos_per_iter, int depth, double radius, double * grad) {
-	int i, j;
-	double dir[MaxVariables], A[MaxVariables], B[MaxVariables], r;
-	memset(grad,0,active_vars * sizeof(double));
-	for (i = 0; i < iter; i++) {
-#ifndef RANDOM_SPHERICAL
-		for (j = 0; j < active_vars; j++) dir[j] = (Odd(rand()) ? 1.0 : (-1.0))/sqrt(active_vars);
-#else
-		for (j = 0, r = 0.0; j < active_vars; j++) {
-			dir[j] = gaussian(0.0, 1.0);
-			r += dir[j] * dir[j];
-		}
-		r = 1.0/sqrt(Max(r, 0.0000001));
-		for (j = 0; j < active_vars; j++) dir[j] *= r;
-#endif
-		compute_list(A,base,dir,Var,-radius);
-		compute_list(B,base,dir,Var,radius);
-		r = 50.0 - match(A,B,pos_per_iter,depth,MatchInfo);
-		for (j = 0; j < active_vars; j++) grad[j] += r * dir[j];
-	}
-	for (i = 0; i < active_vars; i++) grad[i] /= (double)iter;
-}
-void NormalizeVar(double * base, double * base_var, int depth, int positions, double radius, double target, double * var) {
-	int i, j;
-	double A[MaxVariables], r, value, curr_var;
-
-	fprintf(stdout,"NormalizeVar(): depth=%d, positions=%d, radius=%.2lf, target=%.2lf\n",depth,positions,radius,target); 
-	for (i = 0; i < active_vars; i++) {
-		double_to_double(A,base,active_vars);
-		curr_var = base_var[i];
-		fprintf(stdout,"Variable %d (%.2lf):\n",i,curr_var);
-		for (j = 0; j < 10; j++) {
-			A[i] = base[i] + (radius * curr_var);
-			match_los(base,A,positions,16,depth,0.0,0.0,0.0,0.0,MatchInfo,false);
-			r = Convert(100 * MatchInfo->wins + 50 * (double)MatchInfo->draws,double)/(double)(MatchInfo->wins + MatchInfo->draws + MatchInfo->losses);
-			value = elo_from_ratio(r * 0.01);
-			if (value < target) break;
-			curr_var = curr_var * MinF(sqrt(target/Max(value, 1.0)),1.5);
-			fprintf(stdout,"(%.2lf,%.2lf)\n",value,curr_var);
-			if (curr_var > base_var[i]) {
-				curr_var = base_var[i];
-				break;
-			}
-		}
-		var[i] = curr_var;
-		fprintf(stdout, "(%.2lf,%.2lf)\n", value, curr_var);
-	}
-	log_list("var.txt",var,active_vars);
-}
-
-void Gradient(double * base, double * var, int depth, int iter, int pos_per_iter, int max_positions, double radius, double angle_target, double * grad) {
-	typedef struct {
-		double grad[MaxVariables];
-	} GGradient;
-	GGradient A[4], N[4];
-	double list[MaxVariables], av, angle;
-	int i, j, cnt = 0;
-	cmd_number++;
-
-	fprintf(stdout,"Gradient(): depth=%d, iter=%d, pos_per_iter=%d, max_positions=%d, radius=%.2lf\n",depth,iter,pos_per_iter,max_positions,radius);
-	memset(A,0,4 * sizeof(GGradient));
-	memset(grad,0,active_vars * sizeof(double));
-
-	memset(mstring,0,strlen(mstring));
-	sprintf(mstring,"$ Number=%d Command=gradient Depth=%d Iter=%d Positions=%d Radius=%lf Var=",cmd_number,depth,iter,pos_per_iter,radius); log_list(mstring,Var,active_vars,false);
-	sprintf(mstring+strlen(mstring)," Base="); log_list(mstring,Base,active_vars,false);
-	fseek(stdin,0,SEEK_END);
-	fprintf(stdout,"%s\n",mstring);
-
-	while (cnt < max_positions) {
-		for (j = 0; j < 4; j++) {
-start:
-			fgets(mstring,65536,stdin);
-			char * p = strstr(mstring,"Number=");
-			if (p == NULL) goto start;
-			if (atoi(p+7) != cmd_number) goto start;
-			p = strstr(mstring,"Grad="); read_list(p,list,active_vars);
-
-			for (i = 0; i < active_vars; i++) {
-				A[j].grad[i] += list[i]; 
-				N[j].grad[i] = A[j].grad[i];
-			}
-			scale_list(N[j].grad,1.0);
-		}
-		for (i = 0; i < active_vars; i++) grad[i] = A[0].grad[i] + A[1].grad[i] + A[2].grad[i] + A[3].grad[i];
-		scale_list(grad,1.0);
-		av = 0.0;
-		for (i = 0; i < 4; i++) for (j = i + 1; j < 4; j++) av += scalar(N[i].grad,N[j].grad,active_vars);
-		av /= 6.0;
-		av = Min(0.99999,Max(-0.99999,av));
-		angle = (acos(av) * 180.0)/3.1415926535;
-		cnt += 4 * pos_per_iter * iter;
-		fprintf(stdout,"%d positions: angle = %.2lf, gradient = ",cnt,angle);
-		log_list(stdout,grad,active_vars);
-		if (angle < angle_target) break;
-		FILE * fgrad = fopen("gradient.txt","w");
-		log_list(fgrad,grad,active_vars);
-		fprintf(fgrad,"%d\n",cnt);
-		fclose(fgrad);
-	}
-}
-void GD(double * base, double * var, int depth, double radius, double min_radius, double angle_target, int max_grad_positions, int max_line_positions, double high, double low, double uh, double ul) {
-	double Grad[MaxVariables], a, br, A[MaxVariables], B[MaxVariables];
-	FILE * fbest = fopen("gd.txt","w"); fclose(fbest);
-
-	fprintf(stdout,"GD()\n");
-	while (true) {
-start:
-		fbest = fopen("gd.txt","a"); fprintf(fbest,"radius = %.2lf:\n",radius); log_list(fbest,base,active_vars); fclose(fbest);
-		log_list(stdout,base,active_vars);
-		//radius = 2.0; read_list("(0.05,-0.04,-0.00,0.04,0.09,-0.10,-0.00,0.06,-0.14,-0.08,-0.06,0.05,-0.21,-0.10,-0.03,0.04,0.06,-0.01,-0.04,0.06,0.01,-0.05,-0.02,-0.06,-0.05,0.14,0.18,-0.01,-0.01,0.02,-0.11,0.05,-0.00,0.18,-0.15,-0.02,0.03,0.01,-0.06,-0.07,-0.03,0.11,0.13,-0.07,0.06,0.02,-0.01,0.06,-0.07,-0.09,0.01,-0.09,0.13,-0.03,0.04,0.03,-0.04,0.16,0.03,-0.21,-0.01,0.04,-0.03,-0.11,0.00,-0.03,-0.03,-0.11,-0.00,-0.06,0.04,-0.05,0.00,-0.03,-0.12,0.00,-0.07,-0.13,-0.08,0.10,0.11,0.03,0.08,0.12,-0.05,-0.07,-0.01,-0.02,0.08,-0.12,-0.05,0.02,0.03,0.13,-0.08,0.05,0.04,0.02,-0.00,0.06,-0.06,-0.07,-0.00,0.05,-0.09,-0.16,-0.02,-0.07,0.16,-0.24,0.09,0.04,-0.09,0.03,-0.06,0.01,-0.05,0.00,-0.10,-0.02,-0.12,-0.05,-0.05,0.07,0.14,0.16,-0.07,0.03,-0.06,-0.16,-0.03,0.04,-0.04,0.02,-0.12,-0.18,0.01,-0.04,-0.04,-0.18,0.08,0.09,-0.06,-0.00,0.02,-0.03,0.10,0.04,-0.02)", Grad, active_vars);
-		Gradient(base,var,depth,32,1,max_grad_positions,radius,angle_target,Grad);
-		min_radius = Min(radius * 0.45, min_radius);
-		a = radius;
-		while (a >= min_radius) {
-			fprintf(stdout,"Verification %.2lf:\n",a); 
-			compute_list(A,base,Grad,var,a);
-			//eval_to_cpp("gd.cpp", A);
-			if (match_los(A,base,max_line_positions,32,depth,high,low,uh,ul,MatchInfo,true) == 1) {
-				br = a;
-				a *= 0.6;
-				compute_list(B,base,Grad,var,a);
-				double_to_double(base,A,active_vars);
-				log_list("gd.txt",base,active_vars);
-				eval_to_cpp("gd.cpp", base);
-				fprintf(stdout,"New best: "); log_list(stdout,base,active_vars);
-				fprintf(stdout,"Try %.2lf:\n",a);
-				if (match_los(B,A,max_line_positions,32,depth,2.0,2.0,2.0,0.0,MatchInfo,true) == 1) {
-					br = a;
-					double_to_double(base,B,active_vars);
-					log_list("gd.txt",base,active_vars);
-					eval_to_cpp("gd.cpp", base);
-					fprintf(stdout,"New best: "); log_list(stdout,base,active_vars);
-				}
-				if (br < radius * 0.29) radius *= 0.7;
-				goto start;
-			}
-			a *= 0.7;
-		}
-		radius *= 0.7;
-	}
-}
-void get_command() {
-	enum {mode_grad, mode_match};
-	int mode, depth, positions, number;
-	char * p;
-
-	if (RecordGames) Buffer[0] = 0;
-	fgets(mstring,65536,stdin);
-	fseek(stdin,0,SEEK_END);
-	p = strstr(mstring,"Command=");
-	if (p == NULL) return;
-	if (!memcmp(p+8,"gradient",8)) mode = mode_grad;
-	else if (!memcmp(p+8,"match",5)) mode = mode_match;
-	else return;
-	p = strstr(mstring,"Number="); number = atoi(p+7);
-	p = strstr(mstring,"Depth="); depth = atoi(p+6);
-	p = strstr(mstring,"Positions="); positions = atoi(p+10);
-	if (mode == mode_grad) {
-		p = strstr(mstring,"Iter="); int iter = atoi(p+5);
-		p = strstr(mstring,"Radius="); int radius = atof(p+7);
-		p = strstr(mstring,"Var="); read_list(p,Var,active_vars);
-		p = strstr(mstring,"Base="); read_list(p,Base,active_vars);
-		gradient(Base,Var,iter,positions,depth,radius,Grad);
-		memset(mstring,0,strlen(mstring));
-		sprintf(mstring,"$ Number=%d Grad=",number); log_list(mstring,Grad,active_vars,true);
-		fprintf(stdout,"%s\n",mstring);
-	} else if (mode == mode_match) {
-		p = strstr(mstring,"First="); read_list(p,FE,active_vars);
-		p = strstr(mstring,"Second="); read_list(p,SE,active_vars);
-		double r = match(FE,SE,positions,depth,MatchInfo);
-		if (RecordGames) {
-			frec = fopen("games.pgn", "a");
-			fprintf(frec, "%s\n", Buffer);
-			fclose(frec);
-		}
-		memset(mstring,0,strlen(mstring));
-		sprintf(mstring,"$ Number=%d Result=%lf Wins=%d Draws=%d Losses=%d",number,r,MatchInfo->wins,MatchInfo->draws,MatchInfo->losses); 
-		fprintf(stdout,"%s\n",mstring);
-	} else nodes /= 0;
-}
-int get_mat_index(int wq, int bq, int wr, int br, int wl, int bl, int wd, int bd, int wn, int bn, int wp, int bp) {
-	if (wq > 2 || bq > 2 || wr > 2 || br > 2 || wl > 1 || bl > 1 || wd > 1 || bd > 1 || wn > 2 || bn > 2 || wp > 8 || bp > 8) return -1;
-	return wp*MatWP + bp*MatBP + wn*MatWN + bn*MatBN + wl*MatWL + bl*MatBL + wd*MatWD + bd*MatBD + wr*MatWR + br*MatBR + wq*MatWQ + bq*MatBQ;
-}
-int conj_mat_index(int index, int * conj_symm, int * conj_ld, int * conj_ld_symm) {
-	int wq = index % 3; index /= 3;
-	int bq = index % 3; index /= 3;
-	int wr = index % 3; index /= 3;
-	int br = index % 3; index /= 3;
-	int wl = index % 2; index /= 2;
-	int bl = index % 2; index /= 2;
-	int wd = index % 2; index /= 2;
-	int bd = index % 2; index /= 2;
-	int wn = index % 3; index /= 3;
-	int bn = index % 3; index /= 3;
-	int wp = index % 9; index /= 9;
-	int bp = index;
-	*conj_symm = -1;
-	*conj_ld = -1;
-	*conj_ld_symm = -1;
-	if (wq != bq || wr != br || wl != bd || wd != bl || wn != bn || wp != bp) {
-		*conj_symm = get_mat_index(bq, wq, br, wr, bd, wd, bl, wl, bn, wn, bp, wp);
-		if (wl != wd || bl != bd) {
-			*conj_ld = get_mat_index(wq, bq, wr, br, wd, bd, wl, bl, wn, bn, wp, bp);
-			*conj_ld_symm = get_mat_index(bq, wq, br, wr, bl, wl, bd, wd, bn, wn, bp, wp);
-		}
-	}
-	return *conj_symm;
-}
-void pgn_stat() {
-#define elo_eval_ratio 1.0
-#define PosInRow 6
-#define ratio_from_eval(x) ratio_from_elo(elo_eval_ratio * (x))
-#define ind_from_eval(x) (ratio_from_eval((double)(x)) >= 0.5 ? Max(0, (int)((ratio_from_eval((double)(x)) - 0.5) * 100.0)) : Max(0, (int)((0.5 - ratio_from_eval((double)(x))) * 100.0)))
-#define est_from_ind(x) (Eval[x].score/Max(1.0,(double)Eval[x].cnt))
-#define est_from_eval(x) ((x) >= 0 ? est_from_ind(ind_from_eval(x)) : (1.0 - est_from_ind(ind_from_eval(x))))
-	typedef struct {
-		double score;
-		double est;
-		int cnt;
-	} GStat;
-	GStat Eval[64]; for (int i = 0; i < 64; i++) { Eval[i].cnt = 0; Eval[i].score = 1.0; }
-	GStat * Mat = (GStat*)malloc(TotalMat * sizeof(GStat)); memset(Mat, 0, TotalMat * sizeof(GStat));
-	FILE * fpgn;
-	int iter = 0;
-loop:
-	fpgn = fopen("D:/Development/G3T/games.pgn", "r");
-	if (fpgn == NULL) {
-		fprintf(stdout, "File 'games.pgn' not found\n"); getchar();
-		exit(0);
-	}
-	double stat = 0.0, est = 0.0;
-	int cnt = 0;
-	while (true) {
-		fgets(mstring, 65536, fpgn);
-		if (feof(fpgn)) break;
-		if (strstr(mstring, "FEN")) get_board(mstring + 6);
-		double result;
-		if (strstr(mstring, "Result")) {
-			if (strstr(mstring, "1-0")) result = 1.0;
-			else if (strstr(mstring, "0-1")) result = 0.0;
-			else result = 0.5;
-		}
-		if (strchr(mstring, '[')) continue;
-		if (strlen(mstring) < 100) continue;
-		char * ptr = mstring;
-		int eval[20], nc = 0; memset(eval, 0, 20 * sizeof(int));
-		while (*ptr != 0) {
-			if (!Current->capture && !(Current->move & 0xE000)) nc++;
-			else nc = 0;
-			evaluate();
-			if (nc == PosInRow) {
-				double ratio = ratio_from_eval((double)eval[PosInRow - 2]);
-				int r_index;
-				if (ratio >= 0.5) r_index = Max(0, (int)((ratio - 0.5) * 100.0));
-				else r_index = Max(0, (int)((0.5 - ratio) * 100.0));
-				if (Even(iter)) {
-					Eval[r_index].cnt++;
-					Eval[r_index].score += (ratio >= 0.5 ? result : (1.0 - result));
-				}
-
-				if (!(Current->material & FlagUnusualMaterial) && Odd(iter)) {
-					int index = Current->material, conj_symm, conj_ld, conj_ld_symm;
-					conj_mat_index(index, &conj_symm, &conj_ld, &conj_ld_symm);
-					Mat[index].cnt++; Mat[index].score += result; Mat[index].est += est_from_eval(eval[PosInRow - 1]);
-					if (conj_symm >= 0) Mat[conj_symm].cnt++; Mat[conj_symm].score += 1.0 - result; Mat[conj_symm].est += 1.0 - est_from_eval(eval[PosInRow - 1]);
-					if (conj_ld >= 0) Mat[conj_ld].cnt++; Mat[conj_ld].score += result; Mat[conj_ld].est += est_from_eval(eval[PosInRow - 1]);
-					if (conj_ld_symm >= 0) Mat[conj_ld_symm].cnt++; Mat[conj_ld_symm].score += 1.0 - result; Mat[conj_ld_symm].est += 1.0 - est_from_eval(eval[PosInRow - 1]);
-				}
-			}
-			pv_string[0] = *ptr++;
-			pv_string[1] = *ptr++;
-			pv_string[2] = *ptr++;
-			pv_string[3] = *ptr++;
-			if (*ptr == 0 || *ptr == ' ') pv_string[4] = 0;
-			else {
-				pv_string[4] = *ptr++;
-				pv_string[5] = 0;
-			}
-			int move = move_from_string(pv_string);
-			if (Current->turn) {
-				if (!is_legal<1>(move)) break;
-				do_move<1>(move);
-			} else {
-				if (!is_legal<0>(move)) break;
-				do_move<0>(move);
-			}
-			memcpy(Data, Current, sizeof(GData));
-			Current = Data;
-			while (*ptr == ' ') ptr++;
-			for (int i = 19; i >= 1; i--) eval[i] = eval[i - 1];
-			eval[0] = (int)(atof(ptr + 2) * 100.0);
-			ptr = strchr(ptr, '}') + 2;
-		}
-	}
-	fclose(fpgn);
-	if (!iter) {
-		for (int i = 0; i < 64; i++) fprintf(stdout, "ratio(eval x %.2lf) in (%.2lf, %.2lf), score = %.2lf\n", elo_eval_ratio, 50.0 + (double)i, 50.0 + (double)(i + 1), (Eval[i].score * 100.0) / Max(1.0, (double)Eval[i].cnt));
-		iter++;
-		goto loop;
-	}
-	FILE * fmat = fopen("material.txt", "w");
-	fprintf(fmat, "const int MaterialShift[MaterialShiftSize] = {\n");
-	int mat_cnt = 0;
-	for (int index = 0; index < TotalMat; index++) {
-		int cnt = Mat[index].cnt;
-		if (cnt < 64) continue;
-		double ratio = Mat[index].score / (double)cnt;
-		double est = Mat[index].est / (double)cnt;
-		bool flag = (ratio < est);
-		double error = (sqrt(2.0) * 0.5) / sqrt((double)cnt);
-		if (Abs(ratio - est) <= error + 0.01) continue;
-		ratio = ((ratio >= est) ? (ratio - error) : (ratio + error));
-		if (est <= 0.5 && ratio > 0.5) ratio = 0.5000001;
-		if (est >= 0.5 && ratio < 0.5) ratio = 0.4999999;
-		double abs_ratio = ((ratio >= 0.5) ? ratio : (1.0 - ratio));
-		double abs_est = ((est >= 0.5) ? est : (1.0 - est));
-		int curr_ind = 0, new_ind = 0;
-		for (int i = 0; i < 64; i++) {
-			if (Eval[i].score / Max(1.0, (double)Eval[i].cnt) < abs_ratio) new_ind = i;
-			if (Eval[i].score / Max(1.0, (double)Eval[i].cnt) < abs_est) curr_ind = i;
-		}
-		if (Abs(curr_ind - new_ind) <= 1) continue;
-		if (new_ind > curr_ind) new_ind--;
-		else new_ind++;
-		double curr_eval = elo_from_ratio(Eval[curr_ind].score / Max(1.0, (double)Eval[curr_ind].cnt)) / elo_eval_ratio;
-		double new_eval = elo_from_ratio(Eval[new_ind].score / Max(1.0, (double)Eval[new_ind].cnt)) / elo_eval_ratio;
-		int score = (int)Abs(curr_eval - new_eval);
-		if (flag) score = -score;
-		if (Sgn(score) != Sgn(Material[index].score)) score = Sgn(score) * Min(Abs(Material[index].score), Abs(score));
-		if (Abs(score) < 5) continue;
-		mat_cnt++;
-		fprintf(fmat, "%d, %d, ", index, score);
-		if ((mat_cnt % 8) == 0) fprintf(fmat, "\n");
-	}
-	fprintf(fmat, "}; %d\n", mat_cnt * 2);
-	fclose(fmat);
-	fprintf(stdout, "Press any key...\n");
-}
-#endif
+///template <bool me, bool pv> int q_search(int alpha, int beta, int depth, int flags);
+///template <bool me, bool pv> int q_evasion(int alpha, int beta, int depth, int flags);
+///template <bool me, bool exclusion> int search(int beta, int depth, int flags);
+///template <bool me, bool exclusion> int search_evasion(int beta, int depth, int flags);
+///template <bool me, bool root> int pv_search(int alpha, int beta, int depth, int flags);
+///template <bool me> void root();
+///template <bool me> int multipv(int depth);
+///void send_multipv(int depth, int curr_number);
+///void check_time(int searching);
+///void check_time(int time, int searching);
+///void check_state();
 
 #ifndef W32_BUILD
 int lsb(uint64_t x) {
@@ -1960,9 +723,6 @@ void init_magic() {
 	uint64_t j;
 	int k, index, bits, bit_list[16];
 	uint64_t u;
-#ifdef TUNER
-	MagicAttacks = (uint64_t*)malloc(magic_size * sizeof(uint64_t));
-#endif
 	for (i = 0; i < 64; i++) {
 		bits = 64 - BShift[i];
 		for (u = BMagicMask[i], j = 0; T(u); Cut(u), j++) bit_list[j] = lsb(u);
@@ -2128,9 +888,6 @@ void init_pst() {
 }
 void calc_material(int index) {
 	int pawns[2], knights[2], light[2], dark[2], rooks[2], queens[2], bishops[2], major[2], minor[2], tot[2], mat[2], mul[2], quad[2], score, phase, me, i = index;
-#ifdef TUNER
-	Material[index].generation = generation;
-#endif
 	queens[White] = i % 3; i /= 3;
 	queens[Black] = i % 3; i /= 3;
 	rooks[White] = i % 3; i /= 3;
@@ -2261,18 +1018,12 @@ void calc_material(int index) {
 }
 
 void init_material() {
-#ifdef TUNER
-	Material = (GMaterial*)malloc(TotalMat * sizeof(GMaterial));
-#endif
 	memset(Material,0,TotalMat * sizeof(GMaterial));
 	for (int index = 0; index < TotalMat; index++) calc_material(index);
 }
 
 #if 0
 void init_shared() {
-#ifdef TUNER
-	return;
-#endif
 	char name[256];
 	int64_t size = SharedPVHashOffset + pv_hash_size * sizeof(GPVEntry);
 	sprintf(name, "GULL_SHARED_%d", WinParId);
@@ -2303,20 +1054,6 @@ void init() {
 	init_pst();
 	init_eval();
 	if (parent) init_material();
-#ifdef EXPLAIN_EVAL
-	memset(GullCppFile, 0, 16384 * 256);
-	FILE * fcpp; fcpp = fopen(GullCpp, "r");
-	for (cpp_length = 0; cpp_length < 16384; cpp_length++) {
-		if (feof(fcpp)) break;
-		fgets(mstring, 65536, fcpp);
-		memcpy(GullCppFile[cpp_length], mstring, 256);
-		if (!strchr(GullCppFile[cpp_length], '\n')) GullCppFile[cpp_length][255] = '\n';
-		char * p; for (p = GullCppFile[cpp_length]; (*p) == '\t'; p++);
-		strcpy(mstring, p); strcpy(GullCppFile[cpp_length], mstring);
-	}
-	cpp_length--;
-	fclose(fcpp);
-#endif
 }
 
 // -->search.cpp
@@ -2422,7 +1159,7 @@ void move_to_string(int move, char string[]) {
     string[pos] = 0;
 }
 
-int move_from_string(char string[]) { 
+int move_from_string(const char string[]) { 
 	int from, to, move;
     from = ((string[1] - '1') * 8) + (string[0] - 'a');
     to  = ((string[3] - '1') * 8) + (string[2] - 'a');
@@ -2616,13 +1353,6 @@ void get_time_limit(char string[]) {
 		time = btime;
 		inc = binc;
 	}
-#ifdef CPU_TIMING
-	if (CpuTiming) {
-		time = GlobalTime[GlobalTurn];
-		inc = GlobalInc[GlobalTurn];
-		if (UciMaxDepth) DepthLimit = 2 * UciMaxDepth + 2;
-	}
-#endif
 	if (moves) moves = Max(moves - 1, 1);
 	int time_max = Max(time - Min(1000, time/2), 0);
 	int nmoves;
@@ -2642,7 +1372,7 @@ void get_time_limit(char string[]) {
 	}
     InfoTime = StartTime = get_time();
 	Searching = 1;
-	if (MaxPrN > 1) SET_BIT_64(Smpi->searching, 0);
+///	if (MaxPrN > 1) SET_BIT_64(Smpi->searching, 0);
 	if (F(Infinite)) PVN = 1;
 	if (Current->turn == White) root<0>(); else root<1>();
 }
@@ -2666,16 +1396,7 @@ int time_to_stop(GSearchInfo * SI, int time, int searching) {
 }
 
 void check_time(int searching) {
-#ifdef CPU_TIMING
-	if (CpuTiming && UciMaxKNodes && nodes > UciMaxKNodes * 1024) Stop = 1;
-#endif
-#ifdef TUNER
-#ifndef TIMING
-	return;
-#endif
-#else
-	while (!Stop && input()) uci();
-#endif
+///	while (!Stop && input()) uci();
 	int Time;
 	if (Stop) goto jump;
 	CurrTime = get_time();
@@ -2696,13 +1417,7 @@ jump:
 }
 
 void check_time(int time, int searching) {
-#ifdef TUNER
-#ifndef TIMING
-	return;
-#endif
-#else
-	while (!Stop && input()) uci();
-#endif
+///	while (!Stop && input()) uci();
 	int Time;
 	if (Stop) goto jump;
 	CurrTime = get_time();
@@ -2839,100 +1554,6 @@ start:
 }
 #endif
 
-int input() {
-	if (child) return 0;
-    DWORD p;
-	if (F(Input)) return 0;
-	if (F(Console)) {
-	    if (PeekNamedPipe(StreamHandle,NULL,0,NULL,&p,NULL)) return (p > 0);
-        else return 1;
-	} else return 0;
-}
-
-#if 0
-void epd_test(const char string[], int time_limit) {
-	int n = 0, positions = 4000;
-	uint64_t all_nodes = 0, new_time, total_time;
-	double prod = 0.0;
-	char * ptr;
-	FILE * f = fopen(string, "r");
-	if (f == NULL) {
-		fprintf(stdout, "File not found\n");
-		return;
-	}
-	Infinite = 1;
-	int total_depth = 0;
-	Print = 0;
-	Input = 0;
-	total_time = 1;
-	while (!feof(f) && n < positions) {
-	new_position:
-		(void)fgets(mstring, 65536, f);
-		ptr = strchr(mstring, '\n');
-		if (ptr != NULL) *ptr = 0;
-		get_board(mstring);
-		evaluate();
-		if (Current->turn == White) {
-			gen_root_moves<0>();
-		} else {
-			gen_root_moves<1>();
-		}
-		Infinite = 0;
-		MoveTime = TimeLimit1 = 100000000;
-#ifndef TIME_TO_DEPTH
-		TimeLimit2 = time_limit;
-#else
-		TimeLimit2 = TimeLimit1;
-#endif
-		DepthLimit = 127;
-		n++;
-		Stop = 0;
-		Smpi->nodes = nodes = check_node = check_node_smp = 0;
-		StartTime = get_time();
-		if (setjmp(Jump)) {
-			halt_all(0, 127);
-		stop_searching:
-			ZERO_BIT_64(Smpi->searching, Id);
-			Searching = 0;
-			Current = Data;
-			new_time = Max(get_time() - StartTime, 1);
-			total_time += new_time;
-#ifdef MP_NPS
-			all_nodes += Smpi->nodes;
-#else
-			all_nodes += nodes;
-#endif
-			total_depth += LastDepth / 2;
-#ifndef TIME_TO_DEPTH
-			fprintf(stdout, "Position %d: %d [%lf, %d]\n", n, LastDepth / 2, ((double)total_depth) / ((double)n), (all_nodes * Convert(1000, uint64_t)) / total_time);
-#else
-			prod += log((double)new_time);
-			fprintf(stdout, "Position %d: %" PRId64 " [%.0lf, %" PRId64 "]\n", n, new_time, exp(prod / (double)n), (all_nodes * Convert(1000, uint64_t)) / total_time);
-#endif
-			goto new_position;
-		}
-		for (int d = 4; d < 128; d += 2) {
-			LastDepth = d;
-			Searching = 1;
-			SET_BIT_64(Smpi->searching, Id);
-			if (Current->turn == White) {
-				pv_search<0, 1>(-MateValue, MateValue, d, FlagNeatSearch);
-			} else {
-				pv_search<1, 1>(-MateValue, MateValue, d, FlagNeatSearch);
-			}
-#ifdef TIME_TO_DEPTH
-			if (d >= (time_limit * 2)) goto stop_searching;
-#endif
-		}
-	}
-	if (n == 0) {
-		fprintf(stdout, "Empty file\n");
-		return;
-	}
-	fclose(f);
-}
-#endif
-
 HANDLE CreateChildProcess(int child_id) {
 	char name[1024];
 	TCHAR szCmdline[1024];
@@ -2997,10 +1618,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-#ifdef CPU_TIMING
-	SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
-#endif
-
 	init();
 
 	StreamHandle = GetStdHandle(STD_INPUT_HANDLE);
@@ -3024,7 +1641,6 @@ int main(int argc, char *argv[]) {
 
 #if 0 // ToDo
 reset_jump:
-#ifndef TUNER
 	if (parent) {
 		if (setjmp(ResetJump)) {
 			for (i = 1; i < PrN; i++) TerminateProcess(ChildPr[i], 0);
@@ -3046,7 +1662,6 @@ reset_jump:
 		PrN = Smpi->PrN;
 	}
 #endif
-#endif
 ///	if (ResetHash) init_hash();
 	if (ResetHash) TT.init();
 	init_search(0);
@@ -3057,61 +1672,6 @@ reset_jump:
 #endif
 	if (parent) for (i = 1; i < PrN; i++) ChildPr[i] = CreateChildProcess(i);
 
-#ifdef EXPLAIN_EVAL
-	get_board("3rr1k1/1pp2qpp/pnn1pp2/8/3PPB2/PQ3N1P/1PR2PP1/2R3K1 b - - 0 28"); 
-	fexplain = fopen("evaluation.txt", "w");
-	explain = 1; evaluate(); 
-	fclose(fexplain); 
-	fprintf(stdout, "Press any key...\n"); getchar(); exit(0);
-#endif
-
-#ifdef TUNER
-	if (argc >= 2) {
-		if (!memcmp(argv[1], "client", 6)) Client = 1;
-		else if (!memcmp(argv[1], "server", 6)) Server = 1;
-		if (Client || Server) Local = 0;
-	}
-	fprintf(stdout, Client ? "Client\n" : (Server ? "Server\n" : "Local\n"));
-
-	uint64_t ctime; QueryProcessCycleTime(GetCurrentProcess(), &ctime); srand(time(NULL) + 123 * GetProcessId(GetCurrentProcess()) + ctime);
-	QueryProcessCycleTime(GetCurrentProcess(), &ctime); seed = (uint64_t)(time(NULL) + 345 * GetProcessId(GetCurrentProcess()) + ctime);
-	init_openings();
-	init_variables();
-
-	if (Client) {
-#ifdef RECORD_GAMES
-		RecordGames = 1;
-		Buffer = (char*)malloc(16 * 1024 * 1024);
-#endif
-		while (true) get_command();
-	}
-
-	init_pst();
-	init_eval();
-	print_eval();
-
-	//read_list("(-0.24,0.69,-3.56,14.38,-18.97,-9.43,31.93,-42.58,-84.76,-239.60,62.93,83.44,-124.95,25.59,-22.50,152.24,472.44,-652.13,-903.63,-16.63,11.50,-0.02,-202.44,29.65,-2.27,-62.69,-81.95,61.32,-492.11,-51.01,-23.03,-15.79,283.90,-116.64,-4.38,-92.49,-30.59,-48.53,-35.85,15.25,-83.44,-32.20,33.31,-14.71,27.13,215.48,-48.91,-107.82,5.28,-59.32,-9.16,-16.93,-21.26,-21.12,-35.52,-41.67,-35.52,-16.59,21.48,-1.20,-26.27,-23.81,-58.82,-9.36,38.87,-34.02,-10.33,0.07,101.64,11.30,-66.04,-4.39,10.43,-60.66,-6.41,0.68,-15.18,-69.89,-41.54,-84.48,-143.38,-46.16,-3.12,-13.96,31.00,-16.14,-89.96,100.44,-137.64,97.51,-85.03,62.93,78.39,444.37,-143.70,25.65,-74.57,-143.94,-106.03,-128.86,285.08,111.90,-24.94,-104.36,-142.29,-59.11,-92.95,-32.91,-153.55,15.40,-181.39,-35.76,14.98,-5.08,76.49,-80.38,177.51,132.39,-134.36,-6.67,49.81,-260.99,101.53,-41.31,-26.30,418.42,220.09,-127.18,762.99,-117.88,246.62,-203.99,18.52,266.32,290.73,112.16,292.84,127.11,277.25,189.46,214.95,304.06,399.54,-195.77,280.34,351.89,-485.96,-2.82,251.09,38.25,82.39,152.04,53.11,8.04,7.61,-21.45,10.43,-0.53,4.19,-9.26,13.89,14.56,19.18,7.64,-2.16,138.97,6.71,57.43,0.28,56.89,0.92,-9.14,35.31,1.05,8.57,10.12,34.71,0.23,71.71,76.05,153.65,114.23,85.39,1.34,-12.79,26.11,48.42,125.83,147.73,148.27,41.60,42.53,-14.37,6.87,-6.88,-2.23,130.20,22.09,45.46,15.40,13.11,8.80,2.28,2.99,-0.83,-3.11,-0.81,4.40,6.09,6.27,5.79,5.24,-2.88,-0.26,16.45,-2.67,11.20,7.72,6.17,1.23,3.61,0.08,-0.51,-0.25,9.09,2.08,0.69,0.35,13.18,6.69,0.52,1.58,1.56,-0.95,11.40,0.81,-6.78,3.32,-4.89,8.87,-5.50,31.67,0.30,2.94,0.18,5.42,14.11,33.51,28.03,32.65,21.20,11.16,48.32,14.90,4.31,2.41,2.18,2.69,0.78,0.05,4.27,1.51,17.77,7.82,5.21,1.29,0.15,4.35,-0.12,-0.06,-0.25,3.24,5.37,5.85,14.36,-1.62,9.45,0.47,4.07,5.19,26.33,2.20,20.31,37.81,1.02,82.85,56.61,23.77,19.82,-3.83,47.50,25.50)", Base, active_vars);
-	//eval_to_cpp("gd.cpp", Base);
-
-	save_list(Base);
-
-	//pgn_stat();
-#ifdef RECORD_GAMES
-	match_los(Base, Base, 4 * 64 * 1024, 512, 7, 0.0, 0.0, 0.0, 0.0, MatchInfo, 1);
-#endif
-
-	double NormalizedVar[MaxVariables]; NormalizeVar(Base,Var,2,256,10.0,20.0,NormalizedVar); double_to_double(Var,NormalizedVar,active_vars);
-	//read_list("(4.10,3.41,7.24,11.13,44.59,41.51,67.17,126.38,183.25,328.40,95.55,442.95,110.04,439.85,199.82,506.49,1000.00,531.27,1000.00,94.70,40.64,96.88,182.65,154.15,152.52,490.96,231.09,605.53,1000.00,36.49,55.68,30.62,35.70,21.40,18.08,38.61,48.23,17.96,33.78,25.56,31.86,16.40,22.84,18.78,35.36,26.99,27.03,27.50,41.10,24.01,21.96,28.26,24.41,19.37,21.28,49.80,30.27,10.66,12.25,43.65,28.65,35.98,75.89,26.88,47.37,8.62,37.29,22.31,60.45,28.59,18.53,100.00,54.22,9.86,10.63,83.68,25.20,124.05,121.47,93.76,81.23,48.30,56.78,56.15,67.16,78.24,169.91,68.80,114.34,43.30,55.89,95.85,122.56,102.36,77.96,112.11,88.70,53.74,76.44,47.93,46.64,70.83,57.70,137.88,108.52,125.92,79.97,33.71,49.84,44.58,192.99,129.64,271.09,79.00,145.01,69.40,193.09,156.78,186.59,391.22,150.93,346.72,80.75,230.85,128.81,46.74,49.53,19.18,39.71,27.84,39.56,60.18,55.76,40.46,31.10,34.48,41.23,25.69,22.04,14.65,27.90,31.79,85.75,49.45,100.00,48.27,25.91,60.07,62.46)", Var, active_vars);
-
-	GD(Base,Var,7,5.0,1.0,50.0,16 * 1024,16 * 1024,3.0,2.0,2.0,0.0);
-
-	double New[1024]; read_list("(5.07,27.02,27.37,15.16,28.60,14.62,40.93,8.61,14.02,172.58,178.09,180.83,457.03,128.24,172.66,178.21,343.44,1281.53,45.85)", New, active_vars);
-	for (i = 7; i < 64; i++) {
-		fprintf(stdout, "\ndepth = %d/%d: \n", i, i + 1);
-		match_los(New, Base, 4 * 1024, 128, i, 3.0, 3.0, 0.0, 0.0, MatchInfo, 1);
-	}
-#endif
-
-	while (true) uci();
+	uci(argc, argv);
 	return 0;
 }

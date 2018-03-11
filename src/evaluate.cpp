@@ -1119,9 +1119,6 @@ template <bool HPopCnt> void evaluation() {
 		return;
 	}
 	EI.material = &Material[Current->material];
-#ifdef TUNER
-	if (EI.material->generation != generation) calc_material(Current->material);
-#endif
 	Current->score = EI.material->score + (((Opening(EI.score) * EI.material->phase) + (Endgame(EI.score) * (128 - (int)EI.material->phase)))/128);
 
 	if (Current->ply >= 50) Current->score /= 2;
@@ -2075,9 +2072,6 @@ template <bool HPopCnt> void Position::evaluation() {
 		return;
 	}
 	EI.material = &Material[Current->material];
-#ifdef TUNER
-	if (EI.material->generation != generation) calc_material(Current->material);
-#endif
 	Current->score = EI.material->score + (((Opening(EI.score) * EI.material->phase) + (Endgame(EI.score) * (128 - (int)EI.material->phase)))/128);
 
 	if (Current->ply >= 50) Current->score /= 2;

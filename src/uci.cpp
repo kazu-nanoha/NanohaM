@@ -7,65 +7,123 @@ Copyright (c) 2018 Kazuyuki Kawabata
 This software is released under the MIT License, see "LICENSE.txt".
 */
 
+#include <Windows.h>	// ToDo: 不要にする
+
+#include <string>
+#include <iostream>
+#include <sstream>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include "types.h"
+#include "misc.h"
 #include "TT.h"
 #include "position.h"
 #include "search.h"
+#include "thread.h"
 #include "uci.h"
 
-void uci() {
-    char *ptr = NULL;
-	int i;
-	int64_t value;
+#define PRG_NAME  "Nanoha"
+#define AUTHOR    "Kazuyuki Kawabata"
 
-    (void)fgets(mstring, 65536, stdin);
-    if (feof(stdin)) exit(0);
-    ptr = strchr(mstring, '\n');
-    if (ptr != NULL) *ptr = 0;
-    if (!strcmp(mstring, "uci")) {
-#ifndef W32_BUILD
-		fprintf(stdout,"id name Gull 3 x64\n");
-#else
-		fprintf(stdout,"id name Gull 3\n");
-#endif
-        fprintf(stdout,"id author ThinkingALot\n");
-#ifndef W32_BUILD
-		fprintf(stdout,"option name Hash type spin min 1 max 65536 default 16\n");
-#else
-		fprintf(stdout,"option name Hash type spin min 1 max 1024 default 16\n");
-#endif
-		fprintf(stdout,"option name Ponder type check default false\n");
-		fprintf(stdout,"option name MultiPV type spin min 1 max 64 default 1\n");
-		fprintf(stdout,"option name Clear Hash type button\n");
-		fprintf(stdout,"option name PV Hash type check default true\n");
-		fprintf(stdout,"option name Aspiration window type check default true\n");
-#ifdef CPU_TIMING
-		fprintf(stdout, "option name CPUTiming type check default false\n");
-		fprintf(stdout, "option name MaxDepth type spin min 0 max 128 default 0\n");
-		fprintf(stdout, "option name MaxKNodes type spin min 0 max 65536 default 0\n");
-		fprintf(stdout, "option name BaseTime type spin min 0 max 1000000 default 1000\n");
-		fprintf(stdout, "option name IncTime type spin min 0 max 1000000 default 5\n");
-#endif
-		fprintf(stdout, "option name Threads type spin min 1 max %d default %d\n", Min(CPUs, MaxPrN), PrN);
-#ifdef LARGE_PAGES
-		fprintf(stdout, "option name Large memory pages type check default true\n");
-#endif
-        fprintf(stdout,"uciok\n");
-		if (F(Searching)) init_search(1);
-    } else if (!strcmp(mstring,"ucinewgame")) {
-        Stop = 0;
-		init_search(1);
-    } else if (!strcmp(mstring,"isready")) {
-        fprintf(stdout,"readyok\n");
-		fflush(stdout);
-    }  else if (!memcmp(mstring,"position",8)) {
-        if (F(Searching)) get_position(mstring);
-    } else if (!memcmp(mstring,"go",2)) {
-        if (F(Searching)) get_time_limit(mstring);
-    } else if (!memcmp(mstring,"setoption",9)) {
+#define StartPos  "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL - "
+
+#define MovesTg 30		// ToDo: この数値の意味は？
+#define TimeRatio 120	// ToDo: この数値の意味は？
+#define PonderRatio 120	// ToDo: この数値の意味は？
+
+/**
+
+  USI(Universal Shogi Interface)について
+
+  通信GUI→ENGを「>」、ENG→GUIを「<」で表現する。
+  1. 起動時
+    usiに対して、usiokを2秒以内に返す。時間がかかる処理をusiokまでに入れない。
+    >usi
+    <id name <program name>
+    <id author <program author>
+    <option name XXXX
+    <option name XXXX
+    <usiok
+
+  2.準備確認
+    isready～readyokで時間のかかる初期化をする(定跡や評価関数の読み込み等)
+    >setoption name XXX XXX
+    >setoption name XXX XXX
+    >isready
+    <readyok
+
+  3.対局開始
+    >usinewgame
+
+  4.局面の指定
+    >position [sfen <sfenstring> | startpos] moves <move1> <movei>
+
+  5.探索
+    探索開始前に局面を指定する。
+    時間の単位はms。
+    切れ負けはwtime/btimeのみ指定。フィッシャールールはbinc/wincがつく。
+    秒読みはbyoyomiがつく。
+    エンジンは探索中に適宜infoで状況を返す。
+    最善手をbestmoveで返す。
+
+  5-1 先読みなし
+    goコマンドでENGは探索を開始し、bestmoveで最善手を返す。
+    >go btime <x> wtime <y>
+    >go btime <x> wtime <y> binc <a> winc <b>
+    >go btime <x> wtime <y> byoyomi <z>
+    <info XXX
+    <bestmove [<move1> [ponder <move2>] | resign | win]
+
+  5-2 先読みあり
+    go ponderコマンドでENGは探索を開始する。
+    先読みが当たった場合は、ponderhitが来る。その場合は探索を継続しbestmoveで最善手を返す。
+    >go ponder ...
+    >ponderhit
+    <bestmove ...
+
+    先読みが外れた場合は、stopが来る。その時点の読みをbestmoveで返し、改めて送られてくるgoコマンドで探索を行う。
+    >go ponder XXX
+    >stop
+    <bestmove ...
+    >position ...
+    >go XXX
+    <bestmove ...
+
+  6.終局
+    終局すると結果がGUIからエンジンに通知される
+    >gameover [win | lose | draw]
+
+  7.エンジンの終了
+    GUIからquitが送られてきたら、エンジンのプロセスを終了する
+    >quit
+
+  8.詰探索
+    go mateで探索を開始する。
+    詰む場合は手順を返す。未実装時はnotimplemented、時間切れで読み切れないときはtimeout、詰まないときはnomateを返す。
+    >go mate [<x> | infinite]
+    <checkmate {<move1>...<movei> | notimplemented | timeout | nomate }
+
+  9.info コマンドのオプション
+    string XXX
+    depth <x>
+    seldepth <x>
+    score [cp <x> {lowerbound | upperbound] |mate <y>| mate+ | mate-}
+    time <x>    ms単位で探索時間を返す。pvとセット
+    nodes <x>   探索ノード数
+    pv <move1> ... <movei>
+    currmove <move>
+    hashfull <x>   ハッシュの使用量をパーミルで返す
+    nps <x>
+    string <str>
+
+*/
+
+namespace {
+	void setoption(std::istringstream& iss)
+	{
+		// setoption name ...に対して、issはname ...になって渡される
+#if 0
 		ptr = strtok(mstring," ");
 		for (ptr = strtok(NULL," "); ptr != NULL; ptr = strtok(NULL," ")) {
 			if (!memcmp(ptr,"Hash",4) && !Searching) {
@@ -102,49 +160,199 @@ void uci() {
 				ptr += 14;
 				if (ptr[0] == 't') PVHashing = 1;
 				else PVHashing = 0;
-			} else if (!memcmp(ptr, "Large", 5) && !Searching) {
-				ptr += 25;
-				if (ptr[0] == 't') {
-					if (LargePages) return;
-					LargePages = 1;
-				} else {
-					if (!LargePages) return;
-					LargePages = 0;
-				}
-				ResetHash = 1;
-				longjmp(ResetJump, 1);
-			} else if (!memcmp(ptr, "Aspiration", 10)) {
-				ptr += 24;
-				if (ptr[0] == 't') Aspiration = 1;
-				else Aspiration = 0;
 			}
-#ifdef CPU_TIMING
-			else if (!memcmp(ptr, "CPUTiming", 9)) {
-				ptr += 16;
-				if (ptr[0] == 't') CpuTiming = 1;
-				else CpuTiming = 0;
-			} else if (!memcmp(ptr, "MaxDepth", 8)) UciMaxDepth = atoi(ptr + 15);
-			else if (!memcmp(ptr, "MaxKNodes", 9)) UciMaxKNodes = atoi(ptr + 16);
-			else if (!memcmp(ptr, "BaseTime", 8)) UciBaseTime = atoi(ptr + 15);
-			else if (!memcmp(ptr, "IncTime", 7)) UciIncTime = atoi(ptr + 14);
-#endif
         }
-	} else if (!strcmp(mstring,"stop")) {
-		Stop = 1;
-		if (F(Searching)) send_best_move(root_pos);
-	} else if (!strcmp(mstring,"ponderhit")) {
-		Infinite = 0;
-		if (!RootList[1]) Stop = 1;
-		if (F(CurrentSI->Bad) && F(CurrentSI->FailLow) && time_to_stop(BaseSI, LastTime, 0)) Stop = 1;
-		if (F(Searching)) send_best_move(root_pos);
-	} else if (!strcmp(mstring, "quit")) {
-		// ToDo: 
-		for (i = 1; i < PrN; i++) {
-///			TerminateProcess(ChildPr[i], 0);
-///			CloseHandle(ChildPr[i]);
-		}
-		exit(0);
+#endif
 	}
+
+	void position(Position& pos, std::istringstream& iss)
+	{
+		// コマンドは次の形式(issからpositionは除外されている)
+		// (1) position startpos [moves <move1> <movei>]
+		// (2) position <sfen string> [moves <move1> <movei>]
+		// ToDo:
+		if (F(Searching)) get_position(mstring);
+	}
+
+	void go(Position& pos, std::istringstream& iss)
+	{
+		// コマンドは次の形式(issからgoは除外されている)
+		// (1) go <時間指定>
+		// (2) go ponder <時間指定>
+		// (2) go mate <時間指定>
+		// ToDo: 探索開始
+		// 以下、 get_time_limit() の処理を記載.
+
+		std::string token;
+		int i, time, inc, wtime, btime, winc, binc, moves, pondering, movetime = 0, exp_moves = MovesTg - 1;
+
+		Infinite = 1;
+		MoveTime = 0;
+		SearchMoves = 0;
+		SMPointer = 0;
+		pondering = 0;
+		TimeLimit1 = 0;
+		TimeLimit2 = 0;
+		wtime = btime = 0;
+		winc = binc = 0;
+		moves = 0;
+		Stop = 0;
+		DepthLimit = 128;
+	    while (iss >> token) {
+			if (token == "binc") {
+				iss >> token;
+				binc = stoi(token);
+				Infinite = 0;
+			} else if (token == "btime") { 
+				iss >> token; 
+				btime = stoi(token);
+				Infinite = 0;
+			} else if (token == "depth") { 
+				iss >> token; 
+				DepthLimit = 2 * stoi(token) + 2; 
+				Infinite = 1;
+			} else if (token == "infinite") { 
+				Infinite = 1; 
+			} else if (token == "movestogo") { 
+				iss >> token; 
+				moves = stoi(token);
+				Infinite = 0;
+			} else if (token == "winc") { 
+				iss >> token; 
+				winc = stoi(token);
+				Infinite = 0;
+			} else if (token == "wtime") { 
+				iss >> token; 
+				wtime = stoi(token); 
+				Infinite = 0;
+			} else if (token == "movetime") { 
+				iss >> token;
+				movetime = stoi(token);
+				MoveTime = 1;
+				Infinite = 0;
+			} else if (token == "searchmoves") {
+				if (F(SearchMoves)) {
+					for (i = 0; i < 256; i++) SMoves[i] = 0;
+				}
+			    SearchMoves = 1;
+				while (iss >> token) {
+					SMoves[SMPointer] = move_from_string(token.c_str());
+					SMPointer++;
+				}
+			} else if (token == "ponder") pondering = 1;
+	    }
+
+		if (pondering) Infinite = 1;
+		if (pos.cur_turn() == White) {
+			time = wtime;
+			inc = winc;
+		} else {
+			time = btime;
+			inc = binc;
+		}
+		if (moves) moves = Max(moves - 1, 1);
+		int time_max = Max(time - Min(1000, time/2), 0);
+		int nmoves;
+		if (moves) nmoves = moves;
+		else {
+			nmoves = MovesTg - 1;
+			if (pos.ply() > 40) nmoves += Min(pos.ply() - 40, (100 - pos.ply())/2);
+			exp_moves = nmoves;
+		}
+		TimeLimit1 = Min(time_max, (time_max + (Min(exp_moves, nmoves) * inc))/Min(exp_moves, nmoves));
+		TimeLimit2 = Min(time_max, (time_max + (Min(exp_moves, nmoves) * inc))/Min(3,Min(exp_moves, nmoves)));
+		TimeLimit1 = Min(time_max, (TimeLimit1 * TimeRatio)/100);
+		if (Ponder) TimeLimit1 = (TimeLimit1 * PonderRatio)/100;
+		if (MoveTime) {
+			TimeLimit2 = movetime;
+			TimeLimit1 = TimeLimit2 * 100;
+		}
+	    InfoTime = StartTime = get_time();
+		Searching = 1;
+///		if (MaxPrN > 1) SET_BIT_64(Smpi->searching, 0);
+		if (F(Infinite)) PVN = 1;
+		if (pos.cur_turn() == White) root<0>(); else root<1>();
+	}
+	void gameover(std::istringstream& iss)
+	{
+		// 特に何もしない
+		//   何かするなら、終局までの手、読み筋、評価値等を保存しておいて、結果を踏まえて調整する.
+	}
+
+}
+
+void uci(int argc, char** argv)
+{
+	std::string line;
+	std::string cmd, param;
+
+	while (--argc) {
+		line += *++argv;
+		line += " ";
+	}
+	bool once = (line.length() > 0);
+
+	do {
+		if (std::cin.eof()) break;
+		if (once == false) getline(std::cin, line);
+		if (line.length() == 0) continue;
+	
+		std::istringstream iss(line);
+		iss >> cmd;
+		if (cmd == "usi") {
+			sync_cout << "id name " PRG_NAME "\n"
+			          << "id author " AUTHOR << sync_endl;
+			// ToDo: option を返す
+			sync_cout << "option name Ponder type check default false\n"
+			          << "option name Hash type spin min 64 max 8192 default 64\n"
+			          << "option name Threads type spin min 1 max 32 default 1\n"
+			          << "option name MultiPV type spin min 1 max 16 default 1\n"
+			          << "option name PV_Hash type check default true\n"
+			          << "option name Aspiration window type check default true\n"
+			          << "option name UseBook type check default true\n"
+			          << "option name BookFile type string default book_40.jsk\n"
+			          << "usiok" << sync_endl;
+			if (F(Searching)) init_search(1);
+		} else if (cmd == "isready") {
+			// 時間がかかる初期化はここで行う.
+			// ToDo: 評価ベクトルの読み込み.
+			// ToDo: 定跡データの読み込み.
+			sync_cout << "readyok" << sync_endl;
+		} else if (cmd == "usinewgame") {
+			// ToDo: 新しい対局
+			Stop = 0;
+			init_search(1);
+		} else if (cmd == "setoption") {
+			// option設定.
+			setoption(iss);
+		} else if (cmd == "position") {
+			// ToDo: 局面設定
+			position(root_pos, iss);
+		} else if (cmd == "go") {
+			// ToDo: 探索開始
+			go(root_pos, iss);
+		} else if (cmd == "stop") {
+			// ToDo: 停止処理して、その時点の最善手を送る.
+			Stop = 1;
+			if (F(Searching)) send_best_move(root_pos);
+		} else if (cmd == "ponderhit") {
+			// 先読み当たりで探索を継続する.
+			// ToDo: 探索終了していたらその時点の最善手を送る.
+			Infinite = 0;
+			if (!RootList[1]) Stop = 1;
+			if (F(CurrentSI->Bad) && F(CurrentSI->FailLow) && time_to_stop(BaseSI, LastTime, 0)) Stop = 1;
+			if (F(Searching)) send_best_move(root_pos);
+		} else if (cmd == "gameover") {
+			gameover(iss);
+		} else if (cmd == "quit") {
+			break;
+		} else {
+			// 未定義または非対応のコマンド.
+			sync_cout << "info string Unknown: " << line << sync_endl;
+		}
+	} while (once == false);
+
+	// 終了処理をする.
 }
 
 

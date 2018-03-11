@@ -13,13 +13,7 @@ This software is released under the MIT License, see "LICENSE.txt".
 
 extern const int SeeValue[16];
 
-#ifndef TUNER
 extern int16_t Delta[16 * 4096];
-#else
-extern int16_t DeltaOne[16 * 4096];
-extern int16_t DeltaTwo[16 * 4096];
-extern int16_t * Delta = DeltaOne;
-#endif
 #define DeltaScore(piece,from,to) Delta[((piece) << 12) | ((from) << 6) | (to)]
 #define Delta(from,to) DeltaScore(Square(from),from,to)
 #define DeltaM(move) Delta(From(move),To(move))

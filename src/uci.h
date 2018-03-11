@@ -10,6 +10,6 @@ This software is released under the MIT License, see "LICENSE.txt".
 #if !defined(UCI_H_INCLUDED)
 #define UCI_H_INCLUDED
 
-void uci();
+void uci(int argc, char** argv);
 
 #endif

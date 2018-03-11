@@ -266,9 +266,6 @@ struct GMaterial {
 	int16_t score;
 	uint8_t phase, flags;
 	uint8_t mul[2], pieces[2];
-#ifdef TUNER
-	uint32_t generation;
-#endif
 };
 extern GMaterial * Material;
 #define FlagSingleBishop_w (1 << 0)
@@ -290,7 +287,7 @@ extern int Console;
 
 extern int LastTime;
 ///extern int PVN, Stop, Print, Input = 1, PVHashing = 1, Infinite, MoveTime, SearchMoves, SMPointer, Ponder, Searching, Previous;
-extern int PVN, Stop, Print, PVHashing, Infinite, SearchMoves, SMPointer, Ponder, Searching, Previous;
+extern int PVN, Stop, Print, PVHashing, Infinite, MoveTime, SearchMoves, SMPointer, Ponder, Searching, Previous;
 struct GSearchInfo {
 	int Bad, Change, Singular, Early, FailLow, FailHigh;
 };
@@ -298,7 +295,7 @@ extern GSearchInfo CurrentSI[1], BaseSI[1];
 
 
 // Memo: L550
-extern int Aspiration, LargePages;
+extern int Aspiration;
 #define TimeSingTwoMargin 20
 #define TimeSingOneMargin 30
 
@@ -348,7 +345,7 @@ typedef uint64_t bitboard_t;
 void setup_board();
 void get_board(const char fen[]);
 void move_to_string(int move, char string[]);
-int move_from_string(char string[]);
+int move_from_string(const char string[]);
 
 // ToDo: 適切なところに移動。
 class Position;

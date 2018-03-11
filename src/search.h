@@ -10,6 +10,15 @@ This software is released under the MIT License, see "LICENSE.txt".
 #if !defined(SEARCH_H_INCLUDED)
 #define SEARCH_H_INCLUDED
 
+struct Status {
+	bool initialized;
+	bool searching;
+	bool ponder;
+	bool stop;
+	bool finish;
+};
+extern Status status;
+
 // Memo: L403
 #define halt_check if ((Current - Data) >= 126) {evaluate(pos); return Current->score;} \
     if (Current->ply >= 100) return 0; \

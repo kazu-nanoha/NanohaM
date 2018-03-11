@@ -22,8 +22,8 @@ std::ostream& operator<<(std::ostream&, IOSTREAM_LOCK);
 #define sync_cout std::cout << IO_LOCK
 #define sync_endl std::endl << IO_UNLOCK
 
-extern void cout_lock();
-extern void cout_unlock();
+///extern void cout_lock();
+///extern void cout_unlock();
 
 extern int64_t get_time();
 

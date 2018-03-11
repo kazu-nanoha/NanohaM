@@ -50,6 +50,7 @@ class Position {
 public:
 	Position();
 	~Position();
+	void init_search();
 	template <bool me> void do_move(int move);
 	template <bool me> void undo_move(int move);
 	void do_null();
@@ -71,6 +72,8 @@ public:
 	uint8_t ep_square() const { return Current->ep_square; }
 	uint8_t cur_turn() const { return Current->turn; }
 	uint8_t castle_flags() const { return Current->castle_flags; }
+		uint16_t ply() const { return Current->ply; }
+
 	int height() const { return (int)(Current - Data); }
 
 	void set_mask(bitboard_t bb) { Current->mask = bb; }

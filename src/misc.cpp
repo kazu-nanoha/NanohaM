@@ -8,7 +8,30 @@ This software is released under the MIT License, see "LICENSE.txt".
 */
 
 #include <chrono>
+#include <mutex>
 #include "misc.h"
+
+namespace {
+	std::mutex mtx_cout;
+
+
+	void cout_lock()
+	{
+		mtx_cout.lock();
+	}
+	void cout_unlock()
+	{
+		mtx_cout.unlock();
+	}
+} // namespace
+
+std::ostream& operator<<(std::ostream& os, IOSTREAM_LOCK m)
+{
+	if (m == IO_LOCK) cout_lock();
+	else              cout_unlock();
+	return os;
+}
+
 
 /*
  * Get the time in milliseconds.
