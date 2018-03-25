@@ -150,7 +150,7 @@ This software is released under the MIT License, see "LICENSE.txt".
 #define MatBP (3 * 3 * 3 * 3 * 2 * 2 * 2 * 2 * 3 * 3 * 9)
 #define TotalMat ((2*(MatWQ+MatBQ)+MatWL+MatBL+MatWD+MatBD+2*(MatWR+MatBR+MatWN+MatBN)+8*(MatWP+MatBP)) + 1)
 
-#define magic_size 107648
+#define magic_size 107648	// 2*64*29*29
 
 #define FlagUnusualMaterial (1 << 30)
 
@@ -187,10 +187,10 @@ constexpr uint64_t Line[8] = {Line0,(Line0<<8),(Line0<<16),(Line0<<24),(Line0<<3
 #define IsGreater(me,x,y) ((me) ? ((x) < (y)) : ((x) > (y)))
 
 #define Line(me,n) ((me) ? Line[7 - n] : Line[n])
-#define Square(sq) Board->square[sq]
+///#define Square(sq) Board->square[sq]
 
 // Memo: L339
-#define Check(me) T(Current->att[(me) ^ 1] & King(me))
+///#define Check(me) T(Current->att[(me) ^ 1] & King(me))
 
 
 
@@ -261,13 +261,14 @@ extern uint16_t date;
 
 
 // Memo: L510
-extern uint64_t * MagicAttacks;
+///extern uint64_t *MagicAttacks;
+extern uint64_t MagicAttacks[magic_size];
 struct GMaterial {
 	int16_t score;
 	uint8_t phase, flags;
 	uint8_t mul[2], pieces[2];
 };
-extern GMaterial * Material;
+extern GMaterial Material[];
 #define FlagSingleBishop_w (1 << 0)
 #define FlagSingleBishop_b (1 << 1)
 #define FlagCallEvalEndgame_w (1 << 2)
@@ -287,7 +288,7 @@ extern int Console;
 
 extern int LastTime;
 ///extern int PVN, Stop, Print, Input = 1, PVHashing = 1, Infinite, MoveTime, SearchMoves, SMPointer, Ponder, Searching, Previous;
-extern int PVN, Stop, Print, PVHashing, Infinite, MoveTime, SearchMoves, SMPointer, Ponder, Searching, Previous;
+extern int PVN, Stop, Print, PVHashing, Infinite, MoveTime, Ponder, Searching, Previous;
 struct GSearchInfo {
 	int Bad, Change, Singular, Early, FailLow, FailHigh;
 };
@@ -299,8 +300,14 @@ extern int Aspiration;
 #define TimeSingTwoMargin 20
 #define TimeSingOneMargin 30
 
-
 extern int64_t StartTime, InfoTime, CurrTime;
+
+// 指定した手のみを探索する.
+// GUIからgoコマンドのオプションでsearchmovesを指定されたときの制御に使う.
+//   SearchMoves   … フラグ.
+//   SMPointer     … 指定された手の数.
+//   SMoves[]      … 指定された手を保持する.
+extern int SearchMoves, SMPointer;
 extern uint16_t SMoves[256];	// ToDo: 256の意味
 extern jmp_buf Jump, ResetJump;
 
@@ -340,10 +347,11 @@ extern int PasserClear[8];
 // bitboard
 typedef uint64_t bitboard_t;
 
+typedef uint16_t Move;
 
 //
-void setup_board();
-void get_board(const char fen[]);
+///void setup_board();
+///void get_board(const char fen[]);
 void move_to_string(int move, char string[]);
 int move_from_string(const char string[]);
 

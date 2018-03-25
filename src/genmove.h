@@ -60,13 +60,14 @@ public:
 	template <bool me> void gen_next_moves(Position& pos);
 	template <bool me, bool root> int get_move(Position& pos);
 	template <bool me> void gen_root_moves(Position& pos);
-	template <bool me> int * gen_captures(Position& pos, int * list);
-	template <bool me> int * gen_evasions(Position& pos, int * list);
-	void mark_evasions(Position& pos, int * list);
+	template <bool me> int * gen_captures(Position& pos);
+	template <bool me> int * gen_evasions(Position& pos);
+	void mark_evasions(Position& pos);
 	template <bool me> int * gen_quiet_moves(Position& pos, int * list);
-	template <bool me> int * gen_checks(Position& pos, int * list);
-	template <bool me> int * gen_delta_moves(Position& pos, int * list);
+	template <bool me> int * gen_checks(Position& pos);
+	template <bool me> int * gen_delta_moves(Position& pos);
 private:
+public:	// ToDo: privateで動くようにする.
 	int stage;
 	uint8_t gen_flags;
 	uint16_t killers[3];	// killers[0]=hash_move, killers[1]=killer1, killers[2] = killer2
@@ -77,6 +78,7 @@ private:
 
 
 // Memo: L819
+#if 0
 int pick_move();
 template <bool me, bool root> int get_move();
 template <bool me> int see(int move, int margin);
@@ -87,6 +89,6 @@ void mark_evasions(int * list);
 template <bool me> int * gen_quiet_moves(int * list);
 template <bool me> int * gen_checks(int * list);
 template <bool me> int * gen_delta_moves(int * list);
-
+#endif
 
 #endif

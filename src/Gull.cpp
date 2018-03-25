@@ -1,15 +1,15 @@
-﻿#define W32_BUILD
-#undef W32_BUILD
+﻿///#define W32_BUILD
+///#undef W32_BUILD
 
 #ifdef W32_BUILD
 #define NTDDI_VERSION 0x05010200
 #define _WIN32_WINNT 0x0501
 #endif
 
-#ifndef W32_BUILD
-#define HNI
-#undef HNI
-#endif
+///#ifndef W32_BUILD
+///#define HNI
+///#undef HNI
+///#endif
 
 #include <iostream>
 #include <cmath>
@@ -32,11 +32,11 @@
 #include "search.h"
 #include "thread.h"
 
-#define MP_NPS
-//#undef MP_NPS
+///#define MP_NPS	// --> search.cpp
+/////#undef MP_NPS
 
-#define TIME_TO_DEPTH
-//#undef TIME_TO_DEPTH
+///#define TIME_TO_DEPTH
+/////#undef TIME_TO_DEPTH
 
 using namespace std;
 
@@ -275,8 +275,10 @@ uint64_t PSupport[2][64];
 uint64_t Between[64][64];
 uint64_t FullLine[64][64];
 
-uint64_t * MagicAttacks;
-GMaterial * Material;
+///uint64_t * MagicAttacks;
+///GMaterial * Material;
+uint64_t MagicAttacks[magic_size];
+GMaterial Material[TotalMat];
 ///#define FlagSingleBishop_w (1 << 0)
 ///#define FlagSingleBishop_b (1 << 1)
 ///#define FlagCallEvalEndgame_w (1 << 2)
@@ -450,8 +452,8 @@ const int PstQuadMixedWeights[24] = { // tuner: type=array, var=100, active=0
 
 int PrN = 1, CPUs = 1, HT = 0, parent = 1, child = 0, WinParId, Id = 0, ResetHash = 1, NewPrN = 0;
 HANDLE ChildPr[MaxPrN];
-#define FlagClaimed (1 << 1)
-#define FlagFinished (1 << 2)
+///#define FlagClaimed (1 << 1)
+///#define FlagFinished (1 << 2)
 
 ///GSMPI * Smpi;
 
@@ -479,8 +481,8 @@ uint16_t rand16();
 uint64_t rand64();
 void init_pst();
 void init();
-void setup_board();
-void get_board(const char fen[]);
+///void setup_board();
+///void get_board(const char fen[]);
 ///template <bool me, bool pv> int q_search(int alpha, int beta, int depth, int flags);
 ///template <bool me, bool pv> int q_evasion(int alpha, int beta, int depth, int flags);
 ///template <bool me, bool exclusion> int search(int beta, int depth, int flags);
@@ -842,7 +844,10 @@ end:
 		}
 	}
 }
-void init_pst() {
+void init_pst()
+{
+	/// ToDo: ここの処理.
+#if 0
 	int i, j, k, op, eg, index, r, f, d, e, distQ[4], distL[4], distM[2];
 	memset(Pst,0,16 * 64 * sizeof(int));
 
@@ -885,6 +890,7 @@ void init_pst() {
 	Current->pst = 0;
 	for (i = 0; i < 64; i++)
 	if (Square(i)) Current->pst += Pst(Square(i),i);
+#endif
 }
 void calc_material(int index) {
 	int pawns[2], knights[2], light[2], dark[2], rooks[2], queens[2], bishops[2], major[2], minor[2], tot[2], mat[2], mul[2], quad[2], score, phase, me, i = index;
@@ -1054,12 +1060,15 @@ void init() {
 	init_pst();
 	init_eval();
 	if (parent) init_material();
+	USI::init();
+	TT.init();
 }
 
 // -->search.cpp
 //// void init_search(int clear_hash) 
-
-void setup_board() {
+#if 0
+void setup_board()
+{
 	int i;
 	uint64_t occ;
 
@@ -1103,7 +1112,8 @@ void setup_board() {
 	Stack[sp] = Current->key;
 }
 
-void get_board(const char fen[]) {
+void get_board(const char fen[])
+{
 	int pos, i, j;
 	unsigned char c;
 
@@ -1143,8 +1153,9 @@ void get_board(const char fen[]) {
 	}
 	setup_board();
 }
-
-void move_to_string(int move, char string[]) { 
+#endif
+void move_to_string(int move, char string[])
+{
 	int pos = 0;
     string[pos++] = ((move >> 6) & 7) + 'a';
     string[pos++] = ((move >> 9) & 7) + '1';
@@ -1617,7 +1628,6 @@ int main(int argc, char *argv[]) {
 			PrN = get_num_cpus();
 		}
 	}
-
 	init();
 
 	StreamHandle = GetStdHandle(STD_INPUT_HANDLE);
@@ -1632,12 +1642,6 @@ int main(int argc, char *argv[]) {
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stdin, NULL, _IONBF, 0);
 	fflush(NULL);
-
-#ifndef W32_BUILD
-	fprintf(stdout, "Gull 3 x64\n");
-#else
-	fprintf(stdout, "Gull 3\n");
-#endif
 
 #if 0 // ToDo
 reset_jump:
@@ -1664,14 +1668,18 @@ reset_jump:
 #endif
 ///	if (ResetHash) init_hash();
 	if (ResetHash) TT.init();
-	init_search(0);
+///	init_search(0);
 
 
 #if 0	// ToDo: ちゃんと考える。
 	if (child) while (true) check_state();
 #endif
-	if (parent) for (i = 1; i < PrN; i++) ChildPr[i] = CreateChildProcess(i);
+//	if (parent) for (i = 1; i < PrN; i++) ChildPr[i] = CreateChildProcess(i);
+	
+	Threads.init();
 
-	uci(argc, argv);
+	USI::loop(argc, argv);
+	Threads.set_size(0);
+
 	return 0;
 }

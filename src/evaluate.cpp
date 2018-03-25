@@ -18,6 +18,8 @@ This software is released under the MIT License, see "LICENSE.txt".
 // Memo: L275
 #define FlagUnusualMaterial (1 << 30)
 
+#define Square(sq) Board->square[sq]
+
 
 
 // Memo: L480

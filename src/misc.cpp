@@ -13,17 +13,16 @@ This software is released under the MIT License, see "LICENSE.txt".
 
 namespace {
 	std::mutex mtx_cout;
-
-
-	void cout_lock()
-	{
-		mtx_cout.lock();
-	}
-	void cout_unlock()
-	{
-		mtx_cout.unlock();
-	}
 } // namespace
+
+void cout_lock()
+{
+	mtx_cout.lock();
+}
+void cout_unlock()
+{
+	mtx_cout.unlock();
+}
 
 std::ostream& operator<<(std::ostream& os, IOSTREAM_LOCK m)
 {

@@ -18,6 +18,25 @@ This software is released under the MIT License, see "LICENSE.txt".
 #include "position.h"
 #include "search.h"
 #include "thread.h"
+#include "uci.h"
+
+#define MP_NPS
+
+#undef BB
+#define BB(sq)  pos.bb(sq)
+#undef Square
+#define Square(sq) pos.square(sq)
+
+// Memo: L403
+#if 0
+#define halt_check if ((Current - Data) >= 126) {evaluate(pos); return Current->score;} \
+    if (Current->ply >= 100) return 0; \
+	for (i = 4; i <= Current->ply; i+= 2) if (Stack[sp-i] == Current->key) return 0
+#else
+#define halt_check if (pos.height() >= 126) {evaluate(pos); return pos.score();} \
+    if (pos.ply() >= 100) return 0; \
+if (pos.is_repeat()) return 0
+#endif
 
 // Memo: L425
 GBoard SaveBoard[1];
@@ -41,18 +60,21 @@ Position position[1];
 
 
 // Memo: L2304
-void init_search(int clear_hash) {
+void init_search(Position& pos, int clear_hash)
+{
 	memset(History,1,16 * 64 * sizeof(int16_t));
 	memset(Delta,0,16 * 4096 * sizeof(int16_t));
 	memset(Ref,0,16 * 64 * sizeof(GRef));
-	memset(Data + 1, 0, 127 * sizeof(GData));
+///	memset(Data + 1, 0, 127 * sizeof(GData));
+	pos.init_search();
 	if (clear_hash) {
 		date = 0;
 		date = 1;
 		TT.clear();
 		PVHASH.clear();
 	}
-	get_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+///	get_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+	pos.set_sfen(StartSFEN);
 	nodes = 0;
 	best_move = best_score = 0;
 	LastTime = LastValue = LastExactValue = InstCnt = 0;
@@ -70,11 +92,12 @@ void init_search(int clear_hash) {
 	memset(BaseSI,0,sizeof(GSearchInfo));
 }
 
+namespace {
 // Memo: L2467
 void pick_pv(Position& pos) {
 	GEntry * Entry;
 	GPVEntry * PVEntry;
-	int i, depth, move;
+	int depth, move;
 	if (pvp >= Min(pv_length,64)) {
 		PV[pvp] = 0;
 		return;
@@ -96,8 +119,12 @@ void pick_pv(Position& pos) {
 		pvp++;
 		if (pos.cur_turn()) pos.do_move<1>(move);
 		else pos.do_move<0>(move);
-		if (Current->ply >= 100) goto finish;
-		for (i = 4; i <= Current->ply; i+= 2) if (Stack[sp-i] == pos.key()) {
+		if (pos.ply() >= 100) goto finish;
+///		for (i = 4; i <= pos.ply(); i+= 2) if (Stack[sp-i] == pos.key()) {
+///			PV[pvp] = 0;
+///			goto finish;
+///		}
+		if (pos.is_repeat()) {
 			PV[pvp] = 0;
 			goto finish;
 		}
@@ -107,12 +134,14 @@ finish:
 		else pos.undo_move<0>(move);
 	} else PV[pvp] = 0;
 }
+}
 
 template <bool me> int draw_in_pv(Position& pos) {
 	constexpr bool opp = !me;
 	if (pos.height() >= 126) return 1;
-	if (Current->ply >= 100) return 1;
-	for (int i = 4; i <= Current->ply; i += 2) if (Stack[sp - i] == pos.key()) return 1;
+	if (pos.ply() >= 100) return 1;
+///	for (int i = 4; i <= pos.ply(); i += 2) if (Stack[sp - i] == pos.key()) return 1;
+	if (pos.is_repeat()) return 1;
 	if (GPVEntry * PVEntry = PVHASH.probe(pos.key())) {
 		if (!PVEntry->value) return 1;
 		if (int move = PVEntry->move16) {
@@ -202,7 +231,7 @@ void hash_low(const uint64_t key, int move, const int value, const int depth) {
 	return;
 }
 
-void hash_exact(const uint64_t key, int move, int value, int depth, int exclusion, int ex_depth, int knodes) {
+void hash_exact(const uint64_t key, int move, int value, int ply, int depth, int exclusion, int ex_depth, int knodes) {
 	uint32_t i;
 	int score, min_score;
 	GPVEntry *best;
@@ -217,7 +246,7 @@ void hash_exact(const uint64_t key, int move, int value, int depth, int exclusio
 				PVEntry->value = value;
 				PVEntry->depth = depth;
 				PVEntry->move16 = move;
-				PVEntry->ply = Current->ply;
+				PVEntry->ply = ply;
 				if (ex_depth) {
 					PVEntry->exclusion = exclusion;
 					PVEntry->ex_depth = ex_depth;
@@ -239,15 +268,15 @@ void hash_exact(const uint64_t key, int move, int value, int depth, int exclusio
 	best->exclusion = exclusion;
 	best->ex_depth = ex_depth;
 	best->knodes = knodes;
-	best->ply = Current->ply;
+	best->ply = ply;
 }
 
-template <bool pv> int extension(int move, int depth) {
+template <bool pv> int extension(const Position& pos, int move, int depth) {
 	int ext = 0;
 	if (pv) {
-		if (T(Current->passer & Bit(From(move))) && CRank(Current->turn, From(move)) >= 5 && depth < 16) ext = 2;
+		if (T(pos.Current->passer & Bit(From(move))) && CRank(pos.cur_turn(), From(move)) >= 5 && depth < 16) ext = 2;
 	} else {
-		if (T(Current->passer & Bit(From(move))) && CRank(Current->turn, From(move)) >= 5 && depth < 16) ext = 1; 
+		if (T(pos.Current->passer & Bit(From(move))) && CRank(pos.cur_turn(), From(move)) >= 5 && depth < 16) ext = 1; 
 	}
 	return ext;
 }
@@ -276,26 +305,26 @@ template <bool me> int singular_extension(Position& pos, int ext, int prev_ext, 
 	return singular;
 }
 
-template <bool me> void capture_margin(int alpha, int &score) {
+template <bool me> void capture_margin(Position& pos, int alpha, int &score) {
 	constexpr bool opp = !me;
-	if (Current->score + 200 < alpha) {
-		if (Current->att[me] & Pawn(opp)) {
-			Current->mask ^= Pawn(opp);
-			score = Current->score + 200;
+	if (pos.score() + 200 < alpha) {
+		if (pos.att(me) & Pawn(opp)) {
+			pos.set_mask(pos.mask() ^ Pawn(opp));
+			score = pos.score() + 200;
 		}
-		if (Current->score + 500 < alpha) {
-			if (Current->att[me] & Minor(opp)) {
-				Current->mask ^= Minor(opp);
-				score = Current->score + 500;
+		if (pos.score() + 500 < alpha) {
+			if (pos.att(me) & Minor(opp)) {
+				pos.set_mask(pos.mask() ^ Minor(opp));
+				score = pos.score() + 500;
 			}
-			if (Current->score + 700 < alpha) {
-				if (Current->att[me] & Rook(opp)) {
-					Current->mask ^= Rook(opp);
-					score = Current->score + 700;
+			if (pos.score() + 700 < alpha) {
+				if (pos.att(me) & Rook(opp)) {
+					pos.set_mask(pos.mask() ^ Rook(opp));
+					score = pos.score() + 700;
 				}
-				if (Current->score + 1400 < alpha && (Current->att[me] & Queen(opp))) {
-					Current->mask ^= Queen(opp);
-					score = Current->score + 1400;
+				if (pos.score() + 1400 < alpha && (pos.att(me) & Queen(opp))) {
+					pos.set_mask(pos.mask() ^ Queen(opp));
+					score = pos.score() + 1400;
 				}
 			}
 		}
@@ -324,7 +353,7 @@ template <bool me> void capture_margin(int alpha, int &score) {
 ///	}
 ///	for (int i = Min(16, 126 - (int)(Current - Data)); i < 16; i++) Pos->killer[i][0] = Pos->killer[i][1] = 0;
 ///}
-
+#if 0
 void retrieve_board(GPos * Pos) {
 	for (int i = 0; i < 16; i++) Board->bb[i] = 0;
 	for (int i = 0; i < 64; i++) {
@@ -336,7 +365,7 @@ void retrieve_board(GPos * Pos) {
 		}
 	}
 }
-
+#endif
 ///void init_sp(GSP * Sp, int alpha, int beta, int depth, int pv, int singular, int height) {
 ///	Sp->claimed = 1;
 ///	Sp->active = Sp->finished = 0;
@@ -425,7 +454,7 @@ template <bool me> int multipv(Position& pos, int depth)
 		MultiPV[cnt] = move;
 		move_to_string(move,score_string);
 		if (T(Print)) sprintf(info_string,"info currmove %s currmovenumber %d\n",score_string,cnt + 1);
-		new_depth = depth - 2 + (ext = extension<1>(move, depth));
+		new_depth = depth - 2 + (ext = extension<1>(pos, move, depth));
 		pos.do_move<me>(move);
 		value = -pv_search<opp, 0>(pos, -MateValue,MateValue,new_depth,ExtFlag(ext));
 		MultiPV[cnt] |= value << 16;
@@ -438,14 +467,14 @@ template <bool me> int multipv(Position& pos, int depth)
 			}
 		}
 		best_move = MultiPV[0] & 0xFFFF;
-		Current->score = MultiPV[0] >> 16;
+		pos.set_score(MultiPV[0] >> 16);
 		send_multipv(pos, (depth/2), cnt);
 	}
 	for (;T(move = (MultiPV[cnt] & 0xFFFF)); cnt++) {
 		MultiPV[cnt] = move;
 		move_to_string(move,score_string);
 		if (T(Print)) sprintf(info_string,"info currmove %s currmovenumber %d\n",score_string,cnt + 1);
-		new_depth = depth - 2 + (ext = extension<1>(move, depth));
+		new_depth = depth - 2 + (ext = extension<1>(pos, move, depth));
 		pos.do_move<me>(move);
 		value = -search<opp, 0>(pos, -low, new_depth, FlagNeatSearch | ExtFlag(ext));
 		if (value > low) value = -pv_search<opp, 0>(pos, -MateValue,-low,new_depth,ExtFlag(ext));
@@ -461,12 +490,12 @@ template <bool me> int multipv(Position& pos, int depth)
 				}
 			}
 			best_move = MultiPV[0] & 0xFFFF;
-		    Current->score = MultiPV[0] >> 16;
+		    pos.set_score(MultiPV[0] >> 16);
 			low = MultiPV[PVN - 1] >> 16;
 			send_multipv(pos, (depth/2), cnt);
 		}
 	}
-	return Current->score;
+	return pos.score();
 }
 
 }	// namespace
@@ -482,7 +511,7 @@ template <bool me, bool pv> int q_search(Position& pos, int alpha, int beta, int
 	if (flags & FlagHaltCheck) halt_check;
 	if (flags & FlagCallEvaluation) evaluate(pos);
 	if (Check(me)) return q_evasion<me, pv>(pos, alpha, beta, depth, FlagHashCheck);
-	score = Current->score + 3;
+	score = pos.score() + 3;
 	if (score > alpha) {
 		alpha = score;
 		if (score >= beta) return score;
@@ -490,8 +519,8 @@ template <bool me, bool pv> int q_search(Position& pos, int alpha, int beta, int
 
 	hash_move = hash_depth = 0;
 	if (flags & FlagHashCheck) {
-	    for (i = 0, Entry = TT.top(Current->key); i < TT_cluster_size; Entry++, i++) {
-		    if (Low32(Current->key) == Entry->key32) {
+	    for (i = 0, Entry = TT.top(pos.key()); i < TT_cluster_size; Entry++, i++) {
+		    if (Low32(pos.key()) == Entry->key32) {
 			    if (T(Entry->low_depth)) {
 				    if (Entry->low >= beta && !pv) return Entry->low;
 				    if (Entry->low_depth > hash_depth && T(Entry->move16)) {
@@ -505,12 +534,12 @@ template <bool me, bool pv> int q_search(Position& pos, int alpha, int beta, int
 	    }
 	}
 
-	Current->mask = Piece(opp);
-	capture_margin<me>(alpha, score);
+	pos.set_mask(Piece(opp));
+	capture_margin<me>(pos, alpha, score);
 
 	cnt = 0;
 	if (T(hash_move)) {
-		if (F(Bit(To(hash_move)) & Current->mask) && F(hash_move & 0xE000) && (depth < -8 || (Current->score + DeltaM(hash_move) <= alpha && F(pos.is_check<me>(hash_move))))) goto skip_hash_move;
+		if (F(Bit(To(hash_move)) & pos.mask()) && F(hash_move & 0xE000) && (depth < -8 || (pos.score() + DeltaM(hash_move) <= alpha && F(pos.is_check<me>(hash_move))))) goto skip_hash_move;
 		if (pos.is_legal<me>(move = hash_move)) {
 			if (IsIllegal(me,move)) goto skip_hash_move;
 			if (SeeValue[Square(To(move))] > SeeValue[Square(From(move))]) cnt++;
@@ -524,12 +553,12 @@ template <bool me, bool pv> int q_search(Position& pos, int alpha, int beta, int
 			        if (value >= beta) goto cut;
 			    }
 		    }
-			if (F(Bit(To(hash_move)) & Current->mask) && F(hash_move & 0xE000) && (depth < -2 || depth <= -1 && Current->score + 50 < alpha) && alpha >= beta - 1 && !pv) return alpha;
+			if (F(Bit(To(hash_move)) & pos.mask()) && F(hash_move & 0xE000) && (depth < -2 || depth <= -1 && pos.score() + 50 < alpha) && alpha >= beta - 1 && !pv) return alpha;
 		}
 	}
 skip_hash_move:
-	ml.gen_captures<me>(pos, Current->moves);
-	Current->current = Current->moves;
+	ml.gen_captures<me>(pos);
+	ml.cur = ml.moves;
 	while (move = ml.pick_move()) {
 		if (move == hash_move) continue;
 		if (IsIllegal(me,move)) continue;
@@ -548,9 +577,9 @@ skip_hash_move:
 	}
 
 	if (depth < -2) goto finish;
-	if (depth <= -1 && Current->score + 50 < alpha) goto finish;
-	ml.gen_checks<me>(pos, Current->moves);
-	Current->current = Current->moves;
+	if (depth <= -1 && pos.score() + 50 < alpha) goto finish;
+	ml.gen_checks<me>(pos);
+	ml.cur = ml.moves;
 	while (move = ml.pick_move()) {
 		if (move == hash_move) continue;
 		if (IsIllegal(me,move)) continue;
@@ -568,11 +597,12 @@ skip_hash_move:
 		}
 	}
 
-	if (T(cnt) || Current->score + 30 < alpha || T(Current->threat & Piece(me)) || T((Current->xray[opp] | Current->pin[opp]) & NonPawn(opp)) 
+	if (T(cnt) || pos.score() + 30 < alpha || T(Current->threat & Piece(me)) || T((Current->xray[opp] | Current->pin[opp]) & NonPawn(opp)) 
 		|| T(Pawn(opp) & Line(me, 1) & Shift(me,~PieceAll))) goto finish;
-	Current->margin = alpha - Current->score + 6;
-	ml.gen_delta_moves<me>(pos, Current->moves);
-	Current->current = Current->moves;
+	// ToDo: 6の意味.
+	Current->margin = alpha - pos.score() + 6;
+	ml.gen_delta_moves<me>(pos);
+	ml.cur = ml.moves;
 	while (move = ml.pick_move()) {
 		if (move == hash_move) continue;
 		if (IsIllegal(me,move)) continue;
@@ -599,7 +629,7 @@ skip_hash_move:
 	}
 
 finish:
-	if (depth >= -2 && (depth >= 0 || Current->score + 50 >= alpha)) hash_high(pos.key(), score, 1);
+	if (depth >= -2 && (depth >= 0 || pos.score() + 50 >= alpha)) hash_high(pos.key(), score, 1);
 	return score;
 cut:
 	hash_low(pos.key(), move, score, 1);
@@ -619,8 +649,8 @@ template <bool me, bool pv> int q_evasion(Position& pos, int alpha, int beta, in
 
 	hash_move = hash_depth = 0;
 	if (flags & FlagHashCheck) {
-	    for (i = 0, Entry = TT.top(Current->key); i < TT_cluster_size; Entry++, i++) {
-		    if (Low32(Current->key) == Entry->key32) {
+	    for (i = 0, Entry = TT.top(pos.key()); i < TT_cluster_size; Entry++, i++) {
+		    if (Low32(pos.key()) == Entry->key32) {
 			    if (T(Entry->low_depth)) {
 				    if (Entry->low >= beta && !pv) return Entry->low;
 				    if (Entry->low_depth > hash_depth && T(Entry->move16)) {
@@ -636,25 +666,25 @@ template <bool me, bool pv> int q_evasion(Position& pos, int alpha, int beta, in
 
 	MoveList ml;
 	if (flags & FlagCallEvaluation) evaluate(pos);
-	Current->mask = Filled;
-	if (Current->score - 10 <= alpha && !pv) {
-		Current->mask = Piece(opp);
-		score = Current->score - 10;
-		capture_margin<me>(alpha, score);
+	pos.set_mask(Filled);
+	if (pos.score() - 10 <= alpha && !pv) {
+		pos.set_mask(Piece(opp));
+		score = pos.score() - 10;
+		capture_margin<me>(pos, alpha, score);
 	}
 
 	alpha = Max(score, alpha);
 	pext = 0;
-	ml.gen_evasions<me>(pos, Current->moves);
-	Current->current = Current->moves;
-	if (F(Current->moves[0])) return score;
-	if (F(Current->moves[1])) pext = 1;
+	ml.gen_evasions<me>(pos);
+	ml.cur = ml.moves;
+	if (F(ml.moves[0])) return score;
+	if (F(ml.moves[1])) pext = 1;
 	else {
-		Current->ref[0] = RefM(Current->move).check_ref[0];
-		Current->ref[1] = RefM(Current->move).check_ref[1];
-		ml.mark_evasions(pos, Current->moves);
-	    if (T(hash_move) && (T(Bit(To(hash_move)) & Current->mask) || T(hash_move & 0xE000))) {
-	        for (p = Current->moves; T(*p); p++) {
+		Current->ref[0] = RefM(pos.cur_move()).check_ref[0];
+		Current->ref[1] = RefM(pos.cur_move()).check_ref[1];
+		ml.mark_evasions(pos);
+	    if (T(hash_move) && (T(Bit(To(hash_move)) & pos.mask()) || T(hash_move & 0xE000))) {
+	        for (p = ml.moves; T(*p); p++) {
 		        if (((*p) & 0xFFFF) == hash_move) {
 				    *p |= 0x7FFF0000;
 				    break;
@@ -672,7 +702,7 @@ template <bool me, bool pv> int q_evasion(Position& pos, int alpha, int beta, in
 		}
 		if (F(Square(To(move))) && F(move & 0xE000)) {
 			if (cnt > 3 && F(pos.is_check<me>(move)) && !pv) continue;
-			if ((value = Current->score + DeltaM(move) + 10) <= alpha && !pv) {
+			if ((value = pos.score() + DeltaM(move) + 10) <= alpha && !pv) {
 				score = Max(value, score);
 				continue;
 			}
@@ -692,7 +722,7 @@ template <bool me, bool pv> int q_evasion(Position& pos, int alpha, int beta, in
 cut:
 	return score;
 }
-
+#if 0
 void retrieve_position(GPos * Pos, int copy_stack) {
 	Current->key = Pos->Position->key;
 	Current->pawn_key = Pos->Position->pawn_key;
@@ -716,7 +746,7 @@ void retrieve_position(GPos * Pos, int copy_stack) {
 		(Current + i + 1)->killer[2] = Pos->killer[i][1];
 	}
 }
-
+#endif
 ///void halt_all(GSP * Sp, int locked) {
 ///	GMove * M;
 ///	if (!locked) LOCK(Sp->lock);
@@ -742,7 +772,8 @@ void retrieve_position(GPos * Pos, int copy_stack) {
 
 template <bool me, bool exclusion> int search(Position& pos, int beta, int depth, int flags) {
 	constexpr bool opp = !me;
-	int i, value, cnt, flag, moves_to_play, check, score, move, ext, margin;
+///	int i;
+	int value, cnt, flag, moves_to_play, check, score, move, ext, margin;
 	int hash_move, move_back;
 	int singular, played,
 		high_depth, high_value, hash_value, new_depth, hash_depth, *p;
@@ -788,28 +819,28 @@ template <bool me, bool exclusion> int search(Position& pos, int beta, int depth
 	if (flags & FlagCallEvaluation) evaluate(pos);
 	if (Check(me)) return search_evasion<me, 0>(pos, beta, depth, flags & (~(FlagHaltCheck | FlagCallEvaluation)));
 
-	if ((value = Current->score - 90 - (depth << 3) - (Max(depth - 5, 0) << 5)) >= beta && F(Pawn(opp) & Line(me, 1) & Shift(me,~PieceAll)) && T(NonPawnKing(me)) && F(flags & (FlagReturnBestMove | FlagDisableNull)) && depth <= 13) return value;
-	if ((value = Current->score + 50) < beta && depth <= 3) return MaxF(value, q_search<me, 0>(pos, beta - 1, beta, 1, FlagHashCheck | (flags & 0xFFFF)));
+	if ((value = pos.score() - 90 - (depth << 3) - (Max(depth - 5, 0) << 5)) >= beta && F(Pawn(opp) & Line(me, 1) & Shift(me,~PieceAll)) && T(NonPawnKing(me)) && F(flags & (FlagReturnBestMove | FlagDisableNull)) && depth <= 13) return value;
+	if ((value = pos.score() + 50) < beta && depth <= 3) return MaxF(value, q_search<me, 0>(pos, beta - 1, beta, 1, FlagHashCheck | (flags & 0xFFFF)));
 
 	high_depth = 0;
 	high_value = MateValue;
 	hash_value = -MateValue;
 	hash_depth = -1;
-	Current->best = hash_move = flags & 0xFFFF;
-	if (GEntry * Entry = TT.probe(Current->key)) {
+	pos.best() = hash_move = flags & 0xFFFF;
+	if (GEntry * Entry = TT.probe(pos.key())) {
 		if (Entry->high_depth > high_depth) {
 			high_depth = Entry->high_depth;
 			high_value = Entry->high;
 		}
 		if (Entry->high < beta && Entry->high_depth >= depth) return Entry->high;
 		if (T(Entry->move16) && Entry->low_depth > hash_depth) {
-			Current->best = hash_move = Entry->move16;
+			pos.best() = hash_move = Entry->move16;
 			hash_depth = Entry->low_depth;
 			if (Entry->low_depth) hash_value = Entry->low;
 		}
 		if (Entry->low >= beta && Entry->low_depth >= depth) {
 			if (Entry->move16) {
-				Current->best = Entry->move16;
+				pos.best() = Entry->move16;
 				if (F(Square(To(Entry->move16))) && F(Entry->move16 & 0xE000)) {
 					if (Current->killer[1] != Entry->move16 && F(flags & FlagNoKillerUpdate)) {
 						Current->killer[2] = Current->killer[1];
@@ -822,15 +853,15 @@ template <bool me, bool exclusion> int search(Position& pos, int beta, int depth
 			if (F(flags & FlagReturnBestMove)) return Entry->low;
 		}
 	}
-	if (depth >= 20) if (GPVEntry * PVEntry = PVHASH.probe(Current->key)) {
+	if (depth >= 20) if (GPVEntry * PVEntry = PVHASH.probe(pos.key())) {
 		hash_low(pos.key(), PVEntry->move16,PVEntry->value,PVEntry->depth);
 		hash_high(pos.key(), PVEntry->value,PVEntry->depth);
 		if (PVEntry->depth >= depth) {
-			if (PVEntry->move16) Current->best = PVEntry->move16;
-			if (F(flags & FlagReturnBestMove) && ((Current->ply <= 50 && PVEntry->ply <= 50) || (Current->ply >= 50 && PVEntry->ply >= 50))) return PVEntry->value;
+			if (PVEntry->move16) pos.best() = PVEntry->move16;
+			if (F(flags & FlagReturnBestMove) && ((pos.ply() <= 50 && PVEntry->ply <= 50) || (pos.ply() >= 50 && PVEntry->ply >= 50))) return PVEntry->value;
 		}
 		if (T(PVEntry->move16) && PVEntry->depth > hash_depth) {
-			Current->best = hash_move = PVEntry->move16;
+			pos.best() = hash_move = PVEntry->move16;
 			hash_depth = PVEntry->depth;
 			hash_value = PVEntry->value;
 		}
@@ -841,12 +872,12 @@ template <bool me, bool exclusion> int search(Position& pos, int beta, int depth
 		new_depth = depth - 8;
 		value = search<me, 0>(pos, beta, new_depth, FlagHashCheck | FlagNoKillerUpdate | FlagDisableNull | FlagReturnBestMove | hash_move);
 		if (value >= beta) {
-			if (Current->best) hash_move = Current->best;
+			if (pos.best()) hash_move = pos.best();
 			hash_depth = new_depth;
 			hash_value = beta;
 		}
 	}
-	if (depth >= 4 && Current->score + 3 >= beta && F(flags & (FlagDisableNull | FlagReturnBestMove))
+	if (depth >= 4 && pos.score() + 3 >= beta && F(flags & (FlagDisableNull | FlagReturnBestMove))
 		&& (high_value >= beta || high_depth < depth - 10) && (depth < 12 || (hash_value >= beta && hash_depth >= depth - 12)) && beta > -EvalValue && T(NonPawnKing(me))) {
 		new_depth = depth - 8;
 		pos.do_null();
@@ -864,7 +895,7 @@ template <bool me, bool exclusion> int search(Position& pos, int beta, int depth
 		cnt++;
 		check = pos.is_check<me>(move);
 		if (check) ext = 1 + (depth < 16);
-		else ext = extension<0>(move, depth);
+		else ext = extension<0>(pos, move, depth);
 		if (depth >= 16 && hash_value >= beta && hash_depth >= (new_depth = depth - Min(12, depth/2))) {
 			int margin_one = beta - ExclSingle(depth);
 			int margin_two = beta - ExclDouble(depth);
@@ -885,32 +916,32 @@ template <bool me, bool exclusion> int search(Position& pos, int beta, int depth
 	}
 skip_hash_move:
 	Current->killer[0] = 0;
-	Current->stage = stage_search;
-	Current->gen_flags = 0;
+	ml.stage = stage_search;
+	ml.gen_flags = 0;
 	Current->ref[0] = RefM(Current->move).ref[0];
 	Current->ref[1] = RefM(Current->move).ref[1];
 	move_back = 0;
-	if (beta > 0 && Current->ply >= 2) {
+	if (beta > 0 && pos.ply() >= 2) {
 		if (F((Current - 1)->move & 0xF000)) {
 			move_back = (To((Current - 1)->move) << 6) | From((Current - 1)->move);
 			if (Square(To(move_back))) move_back = 0;
 		}
 	}
 	moves_to_play = 3 + (depth * depth)/6;
-	margin = Current->score + 70 + (depth << 3) + (Max(depth - 7, 0) << 5);
+	margin = pos.score() + 70 + (depth << 3) + (Max(depth - 7, 0) << 5);
 	if ((value = margin) < beta && depth <= 19) {
 		flag = 1;
 		score = Max(value, score);
-		Current->stage = stage_razoring;
-		Current->mask = Piece(opp);
-		if ((value = Current->score + 200 + (depth << 5)) < beta) {
+		ml.stage = stage_razoring;
+		pos.set_mask(Piece(opp));
+		if ((value = pos.score() + 200 + (depth << 5)) < beta) {
 			score = Max(value, score);
-			Current->mask ^= Pawn(opp);
+			pos.set_mask(pos.mask() ^ Pawn(opp));
 		}
 	}
-	Current->current = Current->moves;
-	Current->moves[0] = 0;
-	if (depth <= 5) Current->gen_flags |= FlagNoBcSort;
+	ml.cur = ml.moves;
+	ml.moves[0] = 0;
+	if (depth <= 5) ml.gen_flags |= FlagNoBcSort;
 
 ///	do_split = sp_init = 0;
 ///	if (depth >= SplitDepth && PrN > 1 && parent && !exclusion) do_split = 1;
@@ -923,15 +954,15 @@ skip_hash_move:
 			score = Max(0, score);
 			continue;
 		}
-		if (Current->stage == r_checks) check = 1;
+		if (ml.stage == r_checks) check = 1;
 		else check = pos.is_check<me>(move);
 		if (T(check) && T(pos.see<me>(move, 0))) ext = 1 + (depth < 16);
-		else ext = extension<0>(move, depth);
+		else ext = extension<0>(pos, move, depth);
 		new_depth = depth - 2 + ext;
 		if (F(Square(To(move))) && F(move & 0xE000)) {
 			if (move != Current->killer[1] && move != Current->killer[2]) {
 				if (F(check) && cnt > moves_to_play) {
-				    Current->gen_flags &= ~FlagSort;
+				    ml.gen_flags &= ~FlagSort;
 				    continue;
 		        }
 				if (depth >= 6) {
@@ -948,7 +979,7 @@ skip_hash_move:
 				}
 		    }
 			if (F(check)) {
-			    if ((value = Current->score + DeltaM(move) + 10) < beta && depth <= 3) {
+			    if ((value = pos.score() + DeltaM(move) + 10) < beta && depth <= 3) {
 				    score = Max(value, score);
 				    continue;
 			    }
@@ -959,9 +990,9 @@ skip_hash_move:
 			}
 			if (depth <= 9 && T(NonPawnKing(me)) && F(pos.see<me>(move,-50))) continue;
 		} else {
-			if (Current->stage == r_cap) {
+			if (ml.stage == r_cap) {
 				if (F(check) && depth <= 9 && F(pos.see<me>(move,-50))) continue;
-			} else if (Current->stage == s_bad_cap && F(check) && depth <= 5) continue;
+			} else if (ml.stage == s_bad_cap && F(check) && depth <= 5) continue;
 		}
 ///		if (do_split && played >= 1) {
 ///			if (!sp_init) {
@@ -998,7 +1029,7 @@ skip_hash_move:
 ///		value = smp_search<me>(Sp, pos);
 ///		if (value >= beta && Sp->best_move) {
 ///			score = beta;
-///			Current->best = move = Sp->best_move;
+///			pos.best() = move = Sp->best_move;
 ///			for (i = 0; i < Sp->move_number; i++) {
 ///				GMove * M = &Sp->move[i];
 ///				if ((M->flags & FlagFinished) && M->stage == s_quiet && M->move != move) HistoryBad(M->move);
@@ -1015,7 +1046,7 @@ skip_hash_move:
 	return score;
 cut:
 	if (exclusion) return score;
-	Current->best = move;
+	pos.best() = move;
 	if (depth >= 10) score = Min(beta, score);
 	hash_low(pos.key(), move, score, depth);
 	if (F(Square(To(move))) && F(move & 0xE000)) {
@@ -1024,7 +1055,7 @@ cut:
 			Current->killer[1] = move;
 		}
 		HistoryGood(move);
-		if (move != hash_move && Current->stage == s_quiet) for (p = Current->start; p < (Current->current - 1); p++) HistoryBad(*p);
+		if (move != hash_move && ml.stage == s_quiet) for (p = ml.start; p < (ml.cur - 1); p++) HistoryBad(*p);
 		UpdateRef(move);
 	}
 	return score;
@@ -1033,7 +1064,8 @@ cut:
 template <bool me, bool exclusion> int search_evasion(Position& pos, int beta, int depth, int flags)
 {
 	constexpr bool opp = !me;
-	int i, value, score, pext, move, cnt, hash_value = -MateValue, hash_depth, hash_move, new_depth, ext, check, moves_to_play;
+///	int i;
+	int value, score, pext, move, cnt, hash_value = -MateValue, hash_depth, hash_move, new_depth, ext, check, moves_to_play;
 	int height = pos.height();
 	MoveList ml;
 
@@ -1050,20 +1082,20 @@ template <bool me, bool exclusion> int search_evasion(Position& pos, int beta, i
 	if (exclusion) {
 		cnt = pext = 0;
 		score = beta - 1;
-		ml.gen_evasions<me>(pos, Current->moves);
-	    if (F(Current->moves[0])) return score;
+		ml.gen_evasions<me>(pos);
+	    if (F(ml.moves[0])) return score;
 		goto skip_hash_move;
 	}
-	Current->best = hash_move;
-	if (GEntry * Entry = TT.probe(Current->key)) {
+	pos.best() = hash_move;
+	if (GEntry * Entry = TT.probe(pos.key())) {
 		if (Entry->high < beta && Entry->high_depth >= depth) return Entry->high;
 		if (T(Entry->move16) && Entry->low_depth > hash_depth) {
-			Current->best = hash_move = Entry->move16;
+			pos.best() = hash_move = Entry->move16;
 			hash_depth = Entry->low_depth;
 		}
 		if (Entry->low >= beta && Entry->low_depth >= depth) {
 			if (Entry->move16) {
-				Current->best = Entry->move16;
+				pos.best() = Entry->move16;
 				if (F(Square(To(Entry->move16))) && F(Entry->move16 & 0xE000)) UpdateCheckRef(Entry->move16);
 			}
 			return Entry->low;
@@ -1071,15 +1103,15 @@ template <bool me, bool exclusion> int search_evasion(Position& pos, int beta, i
 		if (Entry->low_depth >= depth - 8 && Entry->low > hash_value) hash_value = Entry->low;
 	}
 
-	if (depth >= 20) if (GPVEntry * PVEntry  = PVHASH.probe(Current->key)) {
+	if (depth >= 20) if (GPVEntry * PVEntry  = PVHASH.probe(pos.key())) {
 		hash_low(pos.key(), PVEntry->move16,PVEntry->value,PVEntry->depth);
 		hash_high(pos.key(), PVEntry->value,PVEntry->depth);
 		if (PVEntry->depth >= depth) {
-			if (PVEntry->move16) Current->best = PVEntry->move16;
+			if (PVEntry->move16) pos.best() = PVEntry->move16;
 			return PVEntry->value;
 		}
 		if (T(PVEntry->move16) && PVEntry->depth > hash_depth) {
-			Current->best = hash_move = PVEntry->move16;
+			pos.best() = hash_move = PVEntry->move16;
 			hash_depth = PVEntry->depth;
 			hash_value = PVEntry->value;
 		}
@@ -1088,24 +1120,24 @@ template <bool me, bool exclusion> int search_evasion(Position& pos, int beta, i
 	if (hash_depth >= depth && hash_value > -EvalValue) score = Min(beta - 1, Max(score, hash_value));
 	if (flags & FlagCallEvaluation) evaluate(pos);
 
-	Current->mask = Filled;
-	if (Current->score - 10 < beta && depth <= 3) {
-		Current->mask = Piece(opp);
-		score = Current->score - 10;
-	    capture_margin<me>(beta, score);
+	pos.set_mask(Filled);
+	if (pos.score() - 10 < beta && depth <= 3) {
+		pos.set_mask(Piece(opp));
+		score = pos.score() - 10;
+	    capture_margin<me>(pos, beta, score);
 	}
 	cnt = 0;
 	pext = 0;
-    ml.gen_evasions<me>(pos, Current->moves);
-	if (F(Current->moves[0])) return score;
-	if (F(Current->moves[1])) pext = 2;
+    ml.gen_evasions<me>(pos);
+	if (F(ml.moves[0])) return score;
+	if (F(ml.moves[1])) pext = 2;
 
 	if (T(hash_move) && pos.is_legal<me>(move = hash_move)) {
 		if (IsIllegal(me,move)) goto skip_hash_move;
 		cnt++;
 		check = pos.is_check<me>(move);
 		if (check) ext = Max(pext, 1 + (depth < 16));
-		else ext = MaxF(pext, extension<0>(move, depth));
+		else ext = MaxF(pext, extension<0>(pos, move, depth));
 		if (depth >= 16 && hash_value >= beta && hash_depth >= (new_depth = depth - Min(12, depth/2))) {
 			int margin_one = beta - ExclSingle(depth);
 			int margin_two = beta - ExclDouble(depth);
@@ -1116,7 +1148,7 @@ template <bool me, bool exclusion> int search_evasion(Position& pos, int beta, i
 		new_depth = depth - 2 + ext;
 		pos.do_move<me>(move);
 		evaluate(pos);
-		if (Current->att[opp] & King(me)) {
+		if (pos.att(opp) & King(me)) {
 			pos.undo_move<me>(move);
 			cnt--;
 			goto skip_hash_move;
@@ -1130,10 +1162,10 @@ template <bool me, bool exclusion> int search_evasion(Position& pos, int beta, i
 	}
 skip_hash_move:
 	moves_to_play = 3 + ((depth * depth) / 6); 
-	Current->ref[0] = RefM(Current->move).check_ref[0];
-	Current->ref[1] = RefM(Current->move).check_ref[1];
-	ml.mark_evasions(pos, Current->moves);
-	Current->current = Current->moves;
+	Current->ref[0] = RefM(pos.cur_move()).check_ref[0];
+	Current->ref[1] = RefM(pos.cur_move()).check_ref[1];
+	ml.mark_evasions(pos);
+	ml.cur = ml.moves;
 	while (move = ml.pick_move()) {
 		if (move == hash_move) continue;
 		if (IsIllegal(me,move)) continue;
@@ -1144,12 +1176,12 @@ skip_hash_move:
 		}
 		check = pos.is_check<me>(move);
 		if (check) ext = Max(pext, 1 + (depth < 16));
-		else ext = MaxF(pext, extension<0>(move, depth));
+		else ext = MaxF(pext, extension<0>(pos, move, depth));
 		new_depth = depth - 2 + ext;
 		if (F(Square(To(move))) && F(move & 0xE000)) {
 			if (F(check)) {
 				if (cnt > moves_to_play) continue;
-				if ((value = Current->score + DeltaM(move) + 10) < beta && depth <= 3) {
+				if ((value = pos.score() + DeltaM(move) + 10) < beta && depth <= 3) {
 					score = Max(value, score);
 					continue;
 				}
@@ -1173,7 +1205,7 @@ skip_hash_move:
 	return score;
 cut:
 	if (exclusion) return score;
-	Current->best = move;
+	pos.best() = move;
 	hash_low(pos.key(), move, score, depth);
 	if (F(Square(To(move))) && F(move & 0xE000)) UpdateCheckRef(move);
 	return score;
@@ -1213,23 +1245,23 @@ template <bool me, bool root> int pv_search(Position& pos, int alpha, int beta, 
 
 check_hash:
 	hash_depth = -1;
-	Current->best = hash_move = 0;
-    if (GPVEntry * PVEntry = PVHASH.probe(Current->key)) {
+	pos.best() = hash_move = 0;
+    if (GPVEntry * PVEntry = PVHASH.probe(pos.key())) {
 		hash_low(pos.key(), PVEntry->move16,PVEntry->value,PVEntry->depth);
 		hash_high(pos.key(), PVEntry->value,PVEntry->depth);
 		if (PVEntry->depth >= depth && T(PVHashing)) {
-			if (PVEntry->move16) Current->best = PVEntry->move16;
-			if ((Current->ply <= 50 && PVEntry->ply <= 50) || (Current->ply >= 50 && PVEntry->ply >= 50)) if (!PVEntry->value || !draw_in_pv<me>(pos)) return PVEntry->value;
+			if (PVEntry->move16) pos.best() = PVEntry->move16;
+			if ((pos.ply() <= 50 && PVEntry->ply <= 50) || (pos.ply() >= 50 && PVEntry->ply >= 50)) if (!PVEntry->value || !draw_in_pv<me>(pos)) return PVEntry->value;
 		}
 		if (T(PVEntry->move16) && PVEntry->depth > hash_depth) {
-			Current->best = hash_move = PVEntry->move16;
+			pos.best() = hash_move = PVEntry->move16;
 			hash_depth = PVEntry->depth;
 			hash_value = PVEntry->value;
 		}
 	}
-	if (GEntry * Entry = TT.probe(Current->key)) {
+	if (GEntry * Entry = TT.probe(pos.key())) {
 		if (T(Entry->move16) && Entry->low_depth > hash_depth) {
-			Current->best = hash_move = Entry->move16;
+			pos.best() = hash_move = Entry->move16;
 			hash_depth = Entry->low_depth;
 			if (Entry->low_depth) hash_value = Entry->low;
 		}
@@ -1249,7 +1281,7 @@ check_hash:
 		value = pv_search<me, 0>(pos, alpha, beta, new_depth, hash_move);
 		if (value > alpha) {
 hash_move_found:
-			if (Current->best) hash_move = Current->best;
+			if (pos.best()) hash_move = pos.best();
 		    hash_depth = new_depth;
 		    hash_value = value;
 			goto skip_iid;
@@ -1268,23 +1300,24 @@ iid_loop:
 skip_iid:
 	if (F(root) && Check(me)) {
 		alpha = Max(height - MateValue, alpha);
-		Current->mask = Filled;
-		ml.gen_evasions<me>(pos, Current->moves);
-		if (F(Current->moves[0])) return height - MateValue; 
-	    if (F(Current->moves[1])) pext = 2;
+		pos.set_mask(Filled);
+		ml.gen_evasions<me>(pos);
+		if (F(ml.moves[0])) return height - MateValue; 
+	    if (F(ml.moves[1])) pext = 2;
 	}
 
 	cnt = 0;
 	if (hash_move && pos.is_legal<me>(move = hash_move)) {
 		cnt++;
 		if (root) {
-		    memset(Data + 1, 0, 127 * sizeof(GData));
-		    move_to_string(move,score_string);
-		    if (Print) sprintf(info_string,"info currmove %s currmovenumber %d\n",score_string,cnt);
+			/// memset(Data + 1, 0, 127 * sizeof(GData));
+			pos.clear_forward();
+			move_to_string(move,score_string);
+			if (Print) sprintf(info_string,"info currmove %s currmovenumber %d\n",score_string,cnt);
 		}
 		check = pos.is_check<me>(move);
 		if (check) ext = 2;
-		else ext = MaxF(pext, extension<1>(move, depth));
+		else ext = MaxF(pext, extension<1>(pos, move, depth));
 		if (depth >= 12 && hash_value > alpha && hash_depth >= (new_depth = depth - Min(12,depth/2))) {
 			int margin_one = hash_value - ExclSinglePV(depth);
 			int margin_two = hash_value - ExclDoublePV(depth);
@@ -1301,7 +1334,7 @@ skip_iid:
 		pos.do_move<me>(move);
 		if (PrN > 1) {
 			evaluate(pos);
-			if (Current->att[opp] & King(me)) {
+			if (pos.att(opp) & King(me)) {
 				pos.undo_move<me>(move);
 				cnt--;
 				goto skip_hash_move;
@@ -1319,7 +1352,7 @@ skip_iid:
 				if (depth >= 14 || T(Console)) send_pv(pos, depth/2, old_alpha, beta, value);
 			}
 		    alpha = value;
-			Current->best = move;
+			pos.best() = move;
 			if (value >= beta) goto cut;
 		} else if (root) {
 			CurrentSI->FailLow = 1;
@@ -1329,20 +1362,22 @@ skip_iid:
 		}
 	}
 skip_hash_move:
-	Current->gen_flags = 0;
+	ml.gen_flags = 0;
 	if (F(Check(me))) {
-		Current->stage = stage_search;
-		Current->ref[0] = RefM(Current->move).ref[0];
-	    Current->ref[1] = RefM(Current->move).ref[1];
+		ml.stage = stage_search;
+		ml.ref[0] = RefM(pos.cur_move()).ref[0];
+	    ml.ref[1] = RefM(pos.cur_move()).ref[1];
 	} else {
-		Current->stage = stage_evasion;
-		Current->ref[0] = RefM(Current->move).check_ref[0];
-		Current->ref[1] = RefM(Current->move).check_ref[1];
+		ml.stage = stage_evasion;
+		ml.ref[0] = RefM(pos.cur_move()).check_ref[0];
+		ml.ref[1] = RefM(pos.cur_move()).check_ref[1];
 	}
-	Current->killer[0] = 0;
-	Current->moves[0] = 0;
-	if (root) Current->current = RootList + 1;
-	else Current->current = Current->moves;
+	pos.killer(0) = 0;
+	ml.moves[0] = 0;
+	/// ToDo: 
+///	if (root) Current->current = RootList + 1;
+///	else Current->current = Current->moves;
+	ml.cur = ml.moves;
 
 ///	if (PrN > 1 && !root && parent && depth >= SplitDepthPV) do_split = 1;
 
@@ -1351,18 +1386,19 @@ skip_hash_move:
 		if (IsIllegal(me,move)) continue;
 		cnt++;
 		if (root) {
-		    memset(Data + 1, 0, 127 * sizeof(GData));
-		    move_to_string(move,score_string);
-		    if (Print) sprintf(info_string,"info currmove %s currmovenumber %d\n",score_string,cnt);
+///			memset(Data + 1, 0, 127 * sizeof(GData));
+			pos.clear_forward();
+			move_to_string(move,score_string);
+			if (Print) sprintf(info_string,"info currmove %s currmovenumber %d\n",score_string,cnt);
 		}
 		if (IsRepetition(alpha + 1,move)) continue;
 		check = pos.is_check<me>(move);
 		if (check) ext = 2;
-		else ext = MaxF(pext, extension<1>(move, depth));
+		else ext = MaxF(pext, extension<1>(pos, move, depth));
 		new_depth = depth - 2 + ext;
-		if (depth >= 6 && F(move & 0xE000) && F(Square(To(move))) && (T(root) || (move != Current->killer[1] && move != Current->killer[2]) || T(Check(me))) && cnt > 3) {
+		if (depth >= 6 && F(move & 0xE000) && F(Square(To(move))) && (T(root) || (move != pos.killer(1) && move != pos.killer(2)) || T(Check(me))) && cnt > 3) {
 			int reduction = msb(cnt) - 1;
-			if (move == Current->ref[0] || move == Current->ref[1]) reduction = Max(0, reduction - 1);
+			if (move == pos.ref(0) || move == pos.ref(1)) reduction = Max(0, reduction - 1);
 			if (reduction >= 2 && !(Queen(White) | Queen(Black)) && popcnt(NonPawnKingAll) <= 4) reduction += reduction / 2;
 			new_depth = Max(3, new_depth - reduction);
 		}
@@ -1414,7 +1450,7 @@ skip_hash_move:
 				if (depth >= 14 || T(Console)) send_pv(pos, depth/2, old_alpha, beta, value);
 			}
 		    alpha = value;
-			Current->best = move;
+			pos.best() = move;
 			if (value >= beta) goto cut;
 		}
 	}
@@ -1422,21 +1458,21 @@ skip_hash_move:
 ///		value = smp_search<me>(Sp, pos);
 ///		if (value > alpha && Sp->best_move) {
 ///			alpha = value;
-///			Current->best = move = Sp->best_move;
+///			pos.best() = move = Sp->best_move;
 ///		}
 ///		if (value >= beta) goto cut;
 ///	}
 	if (F(cnt) && F(Check(me))) {
 		hash_high(pos.key(), 0, 127);
 		hash_low(pos.key(), 0, 0, 127);
-		hash_exact(pos.key(), 0, 0, 127, 0, 0, 0);
+		hash_exact(pos.key(), 0, 0, pos.ply(), 127, 0, 0, 0);
 	    return 0;
 	}
 	if (F(root) || F(SearchMoves)) hash_high(pos.key(), alpha, depth);
 	if (alpha > old_alpha) {
-		hash_low(pos.key(), Current->best,alpha,depth); 
-		if (Current->best != hash_move) ex_depth = 0;
-		if (F(root) || F(SearchMoves)) hash_exact(pos.key(), Current->best,alpha,depth,ex_value,ex_depth,Convert(nodes >> 10,int) - start_knodes); 
+		hash_low(pos.key(), pos.best(), alpha,depth); 
+		if (pos.best() != hash_move) ex_depth = 0;
+		if (F(root) || F(SearchMoves)) hash_exact(pos.key(), pos.best(), alpha, pos.ply(), depth, ex_value, ex_depth, Convert(nodes >> 10,int) - start_knodes); 
 	}
 	return alpha;
 cut:
@@ -1444,7 +1480,8 @@ cut:
 	return alpha;
 }
 
-template <bool me> void root() {
+template <bool me> void root()
+{
 	int i, depth, value, alpha, beta, delta, start_depth = 2, hash_depth = 0, hash_value, store_time = 0, time_est, ex_depth = 0, ex_value, prev_time = 0, knodes = 0;
 	int64_t time;
 	GPVEntry * PVEntry;
@@ -1454,8 +1491,9 @@ template <bool me> void root() {
 	date++;
 	nodes = check_node = check_node_smp = 0;
 ///	if (parent) Smpi->nodes = 0;
-	memcpy(Data, Current, sizeof(GData));
-	Current = Data;
+///	memcpy(Data, Current, sizeof(GData));
+///	Current = Data;
+	pos.reset_current();
 	evaluate(pos);
 	ml.gen_root_moves<me>(pos);
 	if (PVN > 1) {
@@ -1480,7 +1518,7 @@ template <bool me> void root() {
 	memset(CurrentSI,0,sizeof(GSearchInfo));
 	memset(BaseSI,0,sizeof(GSearchInfo));
 	Previous = -MateValue;
-	if (PVEntry = PVHASH.probe(Current->key)) {
+	if (PVEntry = PVHASH.probe(pos.key())) {
 		if (pos.is_legal<me>(PVEntry->move16) && PVEntry->move16 == best_move && PVEntry->depth > hash_depth) {
 			hash_depth = PVEntry->depth;
 			hash_value = PVEntry->value;
@@ -1524,13 +1562,17 @@ set_prev_time:
 					prev_time = 0;
 					goto set_jump;
 				}
-				if (hash_value > 0 && Current->ply >= 2 && F(Square(To(best_move))) && F(best_move & 0xF000) && PrevMove == ((To(best_move) << 6) | From(best_move))) goto set_jump;
+				if (hash_value > 0 && pos.ply() >= 2 && F(pos.square(To(best_move))) && F(best_move & 0xF000) && PrevMove == ((To(best_move) << 6) | From(best_move))) goto set_jump;
 				pos.do_move<me>(best_move);
-				if (Current->ply >= 100) {
+				if (pos.ply() >= 100) {
 					pos.undo_move<me>(best_move);
 					goto set_jump;
 				}
-				for (i = 4; i <= Current->ply; i+=2) if (Stack[sp-i] == Current->key) {
+///				for (i = 4; i <= pos.ply(); i+=2) if (Stack[sp-i] == pos.key()) {
+///					pos.undo_move<me>(best_move);
+///					goto set_jump;
+///				}
+				if (pos.is_repeat()) {
 					pos.undo_move<me>(best_move);
 					goto set_jump;
 				}
@@ -1547,9 +1589,9 @@ set_prev_time:
 	}
 	LastTime = 0;
 set_jump:
-	memcpy(SaveBoard,Board,sizeof(GBoard));
-	memcpy(SaveData,Data,sizeof(GData));
-	save_sp = sp;
+///	memcpy(SaveBoard,Board,sizeof(GBoard));
+///	memcpy(SaveData,Data,sizeof(GData));
+///	save_sp = sp;
 ///	if (setjmp(Jump)) {
 ///		Current = Data;
 ///		Searching = 0;
@@ -1564,7 +1606,8 @@ set_jump:
 ///		return;
 ///	}
 	for (depth = start_depth; depth < DepthLimit; depth += 2) {
-		memset(Data + 1, 0, 127 * sizeof(GData));
+///		memset(Data + 1, 0, 127 * sizeof(GData));
+		pos.clear_forward();
 		CurrentSI->Early = 1;
 		CurrentSI->Change = CurrentSI->FailHigh = CurrentSI->FailLow = CurrentSI->Singular = 0;
 		if (PVN > 1) value = multipv<me>(pos, depth);
@@ -1604,7 +1647,8 @@ loop:
 				if (depth >= 6)
 #endif
 				check_time(LastTime,0);
-				memset(Data + 1, 0, 127 * sizeof(GData));
+///				memset(Data + 1, 0, 127 * sizeof(GData));
+				pos.clear_forward();
 				LastValue = value;
 				memcpy(BaseSI,CurrentSI,sizeof(GSearchInfo));
 				goto loop;
@@ -1634,8 +1678,9 @@ void send_pv(Position& pos, int depth, int alpha, int beta, int score)
 	int i, cur, move, mate = 0, mate_score, sel_depth;
 	int64_t nps, snodes;
 	if (F(Print)) return;
-	for (sel_depth = 1; sel_depth < 127 && T((Data + sel_depth)->att[0]); sel_depth++);
-	sel_depth--;
+///	for (sel_depth = 1; sel_depth < 127 && T((Data + sel_depth)->att[0]); sel_depth++);
+///	sel_depth--;
+	sel_depth = pos.sel_depth();
 	pv_length = 64;
 	if (F(move = best_move)) move = RootList[0];
 	if (F(move)) return;
@@ -1685,7 +1730,8 @@ void send_pv(Position& pos, int depth, int alpha, int beta, int score)
 	}
 	nps = get_time() - StartTime;
 #ifdef MP_NPS
-	snodes = Smpi->nodes;
+///	snodes = Smpi->nodes;
+	snodes = nodes;
 #else
 	snodes = nodes;
 #endif
@@ -1751,7 +1797,8 @@ void send_multipv(Position& pos, int depth, int curr_number) {
 		}
 		nps = get_time() - StartTime;
 #ifdef MP_NPS
-		snodes = Smpi->nodes;
+///		snodes = Smpi->nodes;
+		snodes = nodes;
 #else
 		snodes = nodes;
 #endif
@@ -1766,7 +1813,7 @@ void send_best_move(Position& pos) {
 	int ponder;
 	if (F(Print)) return;
 #ifdef MP_NPS
-	snodes = Smpi->nodes;
+///	snodes = Smpi->nodes;
 #else
 	snodes = nodes;
 #endif

@@ -21,6 +21,9 @@ This software is released under the MIT License, see "LICENSE.txt".
 
 Position root_pos;
 
+#define Square(sq) Board->square[sq]
+
+
 // Memo: L159
 constexpr uint8_t UpdateCastling[64] =
 {
@@ -37,12 +40,23 @@ constexpr uint8_t UpdateCastling[64] =
 };
 
 Position::Position()
-: Current(Data)
+: Current(Data), sp(0), save_sp(0)
 {
 }
 
 Position::~Position()
 {
+}
+
+bool Position::set_sfen(const std::string& sfen)
+{
+	// ToDo: 局面をセットする.
+	return true;
+}
+
+void Position::init_search()
+{
+	clear_forward();
 }
 
 template <bool me> void Position::do_move(int move)
@@ -196,6 +210,10 @@ non_capture:
 		    } else if (to == 58) {
                 rold = 56; 
 			    rnew = 59;
+			} else {
+				// ありえない.
+				rold = 0; 
+				rnew = 0;
 		    }
 			Add(mask_to,rnew);
 			Square(rold) = 0;
@@ -218,7 +236,7 @@ finish:
 	sp++;
 	Stack[sp] = Next->key;
 	Next->move = move;
-	Next->gen_flags = 0;
+///	Next->gen_flags = 0;
 	Current++;
 	nodes++;
 }
@@ -257,7 +275,11 @@ template <bool me> void Position::undo_move(int move)
 		    } else if (to == 58) {
                 rold = 56; 
 			    rnew = 59;
-		    }
+			} else {
+				// ありえない.
+				rold = 0; 
+				rnew = 0;
+			}
 			Square(rnew) = 0;
 			Square(rold) = IRook(me);
 			Rook(me) ^= Bit(rnew);
@@ -308,7 +330,7 @@ void Position::do_null() {
 	Next->passer = Current->passer;
 	Next->score = -Current->score;
 	Next->move = 0;
-	Next->gen_flags = 0;
+///	Next->gen_flags = 0;
 	Current++;
 	nodes++;
 }

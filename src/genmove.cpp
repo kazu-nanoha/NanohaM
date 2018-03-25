@@ -111,7 +111,7 @@ template <bool me> void MoveList::gen_next_moves(Position& pos) {
 		return;
 	case s_good_cap: 
 		pos.set_mask(Piece(opp));
-		r = gen_captures<me>(pos, moves);
+		r = gen_captures<me>(pos);
 		for (q = r - 1, p = moves; q >= p;) {
 		    int move = (*q) & 0xFFFF;
 		    if (!pos.see<me>(move,0)) {
@@ -145,19 +145,19 @@ template <bool me> void MoveList::gen_next_moves(Position& pos) {
 		if (!(gen_flags & FlagNoBcSort)) sort(moves, start);
 		return;
 	case r_cap:
-		r = gen_captures<me>(pos, moves);
+		r = gen_captures<me>(pos);
 		cur = moves;
 		sort(moves, r);
 		return;
 	case r_checks:
-		r = gen_checks<me>(pos, moves);
+		r = gen_checks<me>(pos);
 		cur = moves; 
 		sort(moves, r);
 		return;
 	case e_ev:
 		pos.set_mask(Filled);
-		r = gen_evasions<me>(pos, moves);
-		mark_evasions(pos, moves);
+		r = gen_evasions<me>(pos);
+		mark_evasions(pos);
 		sort(moves, r);
 		cur = moves;
 		return;
@@ -240,9 +240,10 @@ keep_move:
 	*p = 0;
 }
 
-template <bool me> int * MoveList::gen_captures(Position& pos, int * list) {
+template <bool me> int * MoveList::gen_captures(Position& pos) {
 	constexpr bool opp = !me;
 	uint64_t u, v;
+	int* list = moves;
 
 	if (pos.ep_square())
 		for (v = PAtt[opp][pos.ep_square()] & Pawn(me); T(v); Cut(v)) AddMove(lsb(v),pos.ep_square(),FlagEP,MvvLva[IPawn(me)][IPawn(opp)])
@@ -276,10 +277,11 @@ finish:
 	return list;
 }
 
-template <bool me> int * MoveList::gen_evasions(Position& pos, int * list) {
+template <bool me> int * MoveList::gen_evasions(Position& pos) {
 	constexpr bool opp = !me;
 	int king, att_sq, from;
 	uint64_t att, esc, b, u;
+	int* list = moves;
 
 	king = lsb(King(me));
 	att = (NAtt[king] & Knight(opp)) | (PAtt[me][king] & Pawn(opp));
@@ -343,7 +345,9 @@ template <bool me> int * MoveList::gen_evasions(Position& pos, int * list) {
 	return list;
 }
 
-void MoveList::mark_evasions(Position& pos, int * list) {
+void MoveList::mark_evasions(Position& pos)
+{
+	int* list = moves;
 	for (; T(*list); list++) {
 		int move = (*list) & 0xFFFF;
 	    if (F(Square(To(move))) && F(move & 0xE000)) {
@@ -388,10 +392,11 @@ template <bool me> int * MoveList::gen_quiet_moves(Position& pos, int * list) {
 	return list;
 }
 
-template <bool me> int * MoveList::gen_checks(Position& pos, int * list) {
+template <bool me> int * MoveList::gen_checks(Position& pos) {
 	constexpr bool opp = !me;
 	int king, from;
     uint64_t u, v, target, b_target, r_target, clear, xray;
+	int* list = moves;
 
 	clear = ~(Piece(me) | pos.mask());
     king = lsb(King(opp));
@@ -432,11 +437,13 @@ template <bool me> int * MoveList::gen_checks(Position& pos, int * list) {
 	return list;
 }
 
-template <bool me> int * MoveList::gen_delta_moves(Position& pos, int * list) {
+template <bool me> int * MoveList::gen_delta_moves(Position& pos)
+{
 	int to;
 	uint64_t u, v, free, occ;
 	const int margin = pos.margin();
 	constexpr bool opp = !me;
+	int* list = moves;
 
     occ = PieceAll;
 	free = ~occ;
@@ -489,6 +496,6 @@ template int MoveList::get_move<1, 1>(Position& pos);
 template void MoveList::gen_root_moves<false>(Position& pos);
 template void MoveList::gen_root_moves<true>(Position& pos);
 
-template int * MoveList::gen_delta_moves<0>(Position& pos, int * list);
-template int * MoveList::gen_delta_moves<1>(Position& pos, int * list);
+template int * MoveList::gen_delta_moves<0>(Position& pos);
+template int * MoveList::gen_delta_moves<1>(Position& pos);
 

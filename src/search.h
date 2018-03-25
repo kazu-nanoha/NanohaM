@@ -20,9 +20,11 @@ struct Status {
 extern Status status;
 
 // Memo: L403
+#if 0 // DEL
 #define halt_check if ((Current - Data) >= 126) {evaluate(pos); return Current->score;} \
     if (Current->ply >= 100) return 0; \
 	for (i = 4; i <= Current->ply; i+= 2) if (Stack[sp-i] == Current->key) return 0
+#endif
 #define ExtFlag(ext) ((ext) << 16)
 #define Ext(flags) (((flags) >> 16) & 0xF)
 #define FlagHashCheck (1 << 20) // first 20 bits are reserved for the hash killer and extension
@@ -47,7 +49,7 @@ extern int DepthLimit, LastDepth, LastValue, LastExactValue, PrevMove, InstCnt;
 extern int64_t LastSpeed;
 
 // Memo: L804
-void init_search(int clear_hash);
+void init_search(Position& pos, int clear_hash);
 
 
 class Position;

@@ -13,6 +13,8 @@ This software is released under the MIT License, see "LICENSE.txt".
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include <vector>
+#include <atomic>
 
 // Memo: L721
 ///#define MaxSplitPoints 64 // mustn't exceed 64
@@ -35,7 +37,7 @@ struct GMove {
 };
 
 struct GSP {
-	volatile LONG lock;
+	volatile uint64_t lock;
 	volatile int claimed, active, finished, pv, move_number, current, depth, alpha, beta, singular, split, best_move, height; 
 	GMove move[128];
 	jmp_buf jump;
@@ -54,18 +56,48 @@ struct GSP {
 ///	GSP Sp[MaxSplitPoints];
 ///};
 
+// Memo:
+// std::atomic_XX  はメモリモデルに依存しないアクセスをする.
+// 異なるスレッド間でstore/loadの順序通りの値を得るためには
+//   value = ready.load(std::memory_order_acquire);
+//   foo.store(value, std::memory_order_release);
+// のように使う.
+
 class Thread {
 public:
-	Thread();
+	Thread(int n);
 	virtual ~Thread();
 	virtual void search();
+	virtual void worker();
+	void go();
+	void wait_for_go();
+	void wait_die();
 
 private:
+	const int id;
 	std::thread thr;
 	std::mutex mtx;
-	std::condition_variable condi;
-	bool is_exit, is_searching, is_waiting;
+	std::condition_variable condi_req;
+	std::condition_variable condi_ans;
+	// ToDo: たぶんx86系やARMは単なるboolでも動くと思うけど、PowerPC系はダメな気がする.
+	std::atomic_bool req_exit, is_searching, is_waiting, is_ready;
 };
+
+class ThreadPool : public std::vector<Thread*> {
+public:
+	ThreadPool();
+	~ThreadPool();
+	void init();
+	void set_size(int n);
+	void go(Position& pos);
+	void wait_for_stop();
+	void wait_for_finish();
+
+private:
+///	std::atomic_bool foo;
+};
+
+extern ThreadPool Threads;
 
 ///#define SharedMaterialOffset (sizeof(GSMPI))
 ///#define SharedMagicOffset (SharedMaterialOffset + TotalMat * sizeof(GMaterial))

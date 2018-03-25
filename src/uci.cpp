@@ -26,11 +26,65 @@ This software is released under the MIT License, see "LICENSE.txt".
 #define PRG_NAME  "Nanoha"
 #define AUTHOR    "Kazuyuki Kawabata"
 
-#define StartPos  "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL - "
-
 #define MovesTg 30		// ToDo: この数値の意味は？
 #define TimeRatio 120	// ToDo: この数値の意味は？
 #define PonderRatio 120	// ToDo: この数値の意味は？
+
+///namespace {
+///	Position root_pos;
+///}
+
+// オプションの種類.
+// check      false/true
+// spin       数値
+// combo      ポップアップメニュー
+// button     ボタン
+// string     文字列
+// filename   ファイル名
+
+Options::Options()
+: ponder("Ponder", false), 
+  hash("Hash", 64, 64, 8192),
+  m_threads("Threads", 2, 1, 32),
+  multiPV("MultiPV", 1, 1, 16),
+  aspiration("Aspiration", true),
+  useBook("UseBook", true),
+  bookFile("BookFile", "Book_40.jsk")
+{
+	// ToDo: コア数によってスレッド数の上限を変更する.
+}
+
+namespace {
+	std::ostream& operator<<(std::ostream& os, const Option_Check& op)
+	{
+		std::cout << "option name " << op.name << " type check default "
+		          << (op.def_value ? "true" : "false") << std::endl;
+		return os;
+	}
+	std::ostream& operator<<(std::ostream& os, const Option_Spin& op)
+	{
+		std::cout << "option name " << op.name << " type spin min "
+		          << op._min << " max " << op._max << " default " << op.def_value << std::endl;
+		return os;
+	}
+	std::ostream& operator<<(std::ostream& os, const Option_String& op)
+	{
+		std::cout << "option name " << op.name << "type string default " << op.def_value << std::endl;
+		return os;
+	}
+}
+
+std::ostream& operator<<(std::ostream& os, const Options& op)
+{
+	os << op.ponder;
+	os << op.hash;
+	os << op.m_threads;
+	os << op.multiPV;
+	os << op.aspiration;
+	os << op.useBook;
+	os << op.bookFile;
+	return os;
+}
 
 /**
 
@@ -48,8 +102,8 @@ This software is released under the MIT License, see "LICENSE.txt".
 
   2.準備確認
     isready～readyokで時間のかかる初期化をする(定跡や評価関数の読み込み等)
-    >setoption name XXX XXX
-    >setoption name XXX XXX
+    >setoption name XXX value XXX
+    >setoption name XXX value XXX
     >isready
     <readyok
 
@@ -105,24 +159,52 @@ This software is released under the MIT License, see "LICENSE.txt".
     <checkmate {<move1>...<movei> | notimplemented | timeout | nomate }
 
   9.info コマンドのオプション
-    string XXX
     depth <x>
-    seldepth <x>
-    score [cp <x> {lowerbound | upperbound] |mate <y>| mate+ | mate-}
+    seldepth <x>   depthとセットで返す.
     time <x>    ms単位で探索時間を返す。pvとセット
-    nodes <x>   探索ノード数
+    nodes <x>   思考開試からの探索ノード数
     pv <move1> ... <movei>
+    multipv <x>  評価値が最も高い手に1を指定. 2, 3, ...と順に低くなる。
+    score [cp <x> {lowerbound | upperbound] |mate <y>| mate+ | mate-}
+                 エンジンからの評価値(エンジンが有利だと正、不利だと負)
     currmove <move>
-    hashfull <x>   ハッシュの使用量をパーミルで返す
+    hashfull <x>   ハッシュの使用率をパーミルで返す
     nps <x>
     string <str>
+    string XXX
 
 */
 
 namespace {
+	void unknown(std::istringstream& iss, const char* opt, const char* var = NULL)
+	{
+		std::string name;
+		cout_lock();
+		std::cout << "info string Unknown " << opt <<":";
+		if (var) std::cout << var << " ";
+		do {
+			std::cout << name << " ";
+		} while (iss >> name);
+		std::cout << std::endl;
+		cout_unlock();
+	}
 	void setoption(std::istringstream& iss)
 	{
 		// setoption name ...に対して、issはname ...になって渡される
+		std::string name;
+		std::string value;
+		int v;
+		if (iss >> name) {
+			if (name == "Threads") {
+				iss >> name;	// "value"を読み飛ばす.
+				iss >> value;
+				v = std::stoi(value);
+				options.set_threads(v);
+			} else {
+				unknown(iss, "option");
+				return;
+			}
+		}
 #if 0
 		ptr = strtok(mstring," ");
 		for (ptr = strtok(NULL," "); ptr != NULL; ptr = strtok(NULL," ")) {
@@ -153,9 +235,9 @@ namespace {
 				ptr += 13;
 				if (ptr[0] == 't') Ponder = 1;
 				else Ponder = 0;
-			} else if (!memcmp(ptr,"Clear",5)) {
-				init_search(1);
-				break;
+///			} else if (!memcmp(ptr,"Clear",5)) {
+///				init_search(1);
+///				break;
 			} else if (!memcmp(ptr,"PV",2)) {
 				ptr += 14;
 				if (ptr[0] == 't') PVHashing = 1;
@@ -167,11 +249,38 @@ namespace {
 
 	void position(Position& pos, std::istringstream& iss)
 	{
+		std::string token, sfen;
+		Move m;
+
 		// コマンドは次の形式(issからpositionは除外されている)
 		// (1) position startpos [moves <move1> <movei>]
-		// (2) position <sfen string> [moves <move1> <movei>]
+		// (2) position sfen <sfen string> [moves <move1> <movei>]
 		// ToDo:
-		if (F(Searching)) get_position(mstring);
+///		if (F(Searching)) get_position(mstring);
+		iss >> token;
+		if (token == "startpos") {
+			sfen = StartSFEN;
+			iss >> token;
+		} else if (token == "sfen") {
+			while (iss >> token && token != "moves") {
+				sfen += token + " ";
+			}
+		} else {
+			unknown(iss, "position");
+			return;
+		}
+		pos.set_sfen(sfen);
+		while (iss >> token) {
+			m = move_from_string(token.c_str());
+			bool ret = pos.cur_turn() ? pos.is_legal<1>(m) : pos.is_legal<0>(m);
+			if (ret) {
+				pos.cur_turn() ? pos.do_move<1>(m) : pos.do_move<0>(m);
+			} else {
+				unknown(iss, "moves", token.c_str());
+				return;
+			}
+		}
+		// ToDo: 
 	}
 
 	void go(Position& pos, std::istringstream& iss)
@@ -277,14 +386,24 @@ namespace {
 	{
 		// 特に何もしない
 		//   何かするなら、終局までの手、読み筋、評価値等を保存しておいて、結果を踏まえて調整する.
+		std::string param;
+		iss >> param;
+		sync_cout << "info string " << param << sync_endl;
 	}
 
 }
 
-void uci(int argc, char** argv)
+Options options;
+
+void USI::init()
+{
+}
+
+void USI::loop(int argc, char** argv)
 {
 	std::string line;
 	std::string cmd, param;
+///	Position root_pos;
 
 	while (--argc) {
 		line += *++argv;
@@ -303,6 +422,10 @@ void uci(int argc, char** argv)
 			sync_cout << "id name " PRG_NAME "\n"
 			          << "id author " AUTHOR << sync_endl;
 			// ToDo: option を返す
+			sync_cout;
+			std::cout << options;
+			std::cout << "usiok" << sync_endl;
+#if 0
 			sync_cout << "option name Ponder type check default false\n"
 			          << "option name Hash type spin min 64 max 8192 default 64\n"
 			          << "option name Threads type spin min 1 max 32 default 1\n"
@@ -312,7 +435,8 @@ void uci(int argc, char** argv)
 			          << "option name UseBook type check default true\n"
 			          << "option name BookFile type string default book_40.jsk\n"
 			          << "usiok" << sync_endl;
-			if (F(Searching)) init_search(1);
+#endif
+///			if (F(Searching)) init_search(root_pos, 1);
 		} else if (cmd == "isready") {
 			// 時間がかかる初期化はここで行う.
 			// ToDo: 評価ベクトルの読み込み.
@@ -321,7 +445,7 @@ void uci(int argc, char** argv)
 		} else if (cmd == "usinewgame") {
 			// ToDo: 新しい対局
 			Stop = 0;
-			init_search(1);
+			init_search(root_pos, 1);
 		} else if (cmd == "setoption") {
 			// option設定.
 			setoption(iss);

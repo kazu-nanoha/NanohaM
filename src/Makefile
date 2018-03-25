@@ -10,9 +10,9 @@ CC=g++
 
 TARGET=Nanoha.exe
 SRCS=Gull.cpp TT.cpp evaluate.cpp misc.cpp uci.cpp position.cpp genmove.cpp \
-	search.cpp
+	search.cpp thread.cpp
 OBJS=Gull.o   TT.o   evaluate.o   misc.o   uci.o   position.o   genmove.o \
-	search.o
+	search.o   thread.o
 
 .cpp.o:
 	$(CC) -c $(CFLAGS) $<

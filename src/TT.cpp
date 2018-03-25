@@ -55,6 +55,7 @@ GPawnEntry * PawnHash::entry(uint64_t key)
 
 void TranspositionTable::init()
 {
+	hash_table = new GEntry[hash_size];
 }
 
 GEntry * TranspositionTable::probe(uint64_t key)
