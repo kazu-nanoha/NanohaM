@@ -1180,7 +1180,6 @@ int move_from_string(const char string[]) {
     from = ((string[1] - '1') * 8) + (string[0] - 'a');
     to  = ((string[3] - '1') * 8) + (string[2] - 'a');
     move = (from << 6) | to;
-    if (Board->square[from] >= WhiteKing && std::abs(to - from) == 2) move |= FlagCastling;
     if (Current->ep_square && to == Current->ep_square) move |= FlagEP;
     if (string[4] != 0) {
         if (string[4] == 'q') move |= FlagPQueen;

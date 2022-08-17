@@ -49,8 +49,6 @@ constexpr bool Multiple(int x)
 constexpr bool Single(int x) { return ((x) & ((x)-1)) == 0; }
 #define Add(x, b) (x |= Bit(b))
 
-//#define From(move) (((move) >> 6) & 0x3f)
-//#define To(move) ((move) & 0x3f)
 constexpr int From(Move move) { return (((move) >> 6) & 0x3f); }
 constexpr int To(Move move) { return ((move)&0x3f); }
 inline void SetScore(int &move, int score)
@@ -92,8 +90,6 @@ constexpr bitboard_t DarkArea = ~LightArea;
 constexpr bitboard_t FileA = 0x0101010101010101ULL;
 constexpr bitboard_t Line0 = 0x00000000000000FFULL;
 
-///#define High32(x) ((x) >> 32)
-///#define Low32(x) (static_cast<uint32_t>(x))
 constexpr uint32_t High32(uint64_t x) { return static_cast<uint32_t>((x) >> 32); }
 constexpr uint32_t Low32(uint64_t x) { return static_cast<uint32_t>(x); }
 
@@ -114,12 +110,12 @@ constexpr uint32_t Low32(uint64_t x) { return static_cast<uint32_t>(x); }
 #define WhiteKing 14
 #define BlackKing 15
 
-#define CanCastle_OO 1
-#define CanCastle_oo 2
-#define CanCastle_OOO 4
-#define CanCastle_ooo 8
+///#define CanCastle_OO 1
+///#define CanCastle_oo 2
+///#define CanCastle_OOO 4
+///#define CanCastle_ooo 8
 
-#define FlagCastling 0x1000
+///#define FlagCastling 0x1000
 #define FlagEP 0x2000
 #define FlagPKnight 0x4000
 #define FlagPLight 0x6000
@@ -131,7 +127,7 @@ constexpr bool IsPromotion(Move move)
 {
 	return ((move & 0xC000) != 0);
 }
-constexpr bool IsCastling(Move move) { return (((move)&FlagCastling) != 0); }
+///constexpr bool IsCastling(Move move) { return (((move)&FlagCastling) != 0); }
 constexpr bool IsEP(Move move) { return (((move)&0xF000) == FlagEP); }
 constexpr int Promotion(Move move, int side) { return ((side) + (((move)&0xF000) >> 12)); }
 
@@ -217,17 +213,6 @@ extern uint64_t Kpk[2][64][64];
 #define NB(me, x) ((me) ? msb(x) : lsb(x))
 #define NBZ(me, x) ((me) ? MSBZ(x) : LSBZ(x))
 
-// Memo: L427
-#if 0
-struct GPosData {
-	uint64_t key, pawn_key;
-	uint16_t move;
-	uint8_t turn, castle_flags, ply, ep_square, piece, capture;
-	uint8_t square[64];
-	int pst, material;
-};
-#endif
-
 // Memo: L447
 extern int RootList[256];
 
@@ -261,7 +246,6 @@ extern uint64_t FullLine[64][64];
 // Memo: L479
 extern uint64_t TurnKey;
 extern uint64_t PieceKey[16][64];
-extern uint64_t CastleKey[16];
 extern uint64_t EPKey[8];
 extern uint16_t date;
 
@@ -387,20 +371,7 @@ extern uint64_t nodes, check_node, check_node_smp;
 
 #define FlagSort (1 << 0)
 #define FlagNoBcSort (1 << 1)
-#if 0
-struct GData {
-	uint64_t key, pawn_key, eval_key, att[2], patt[2], passer, xray[2], pin[2], threat, mask;
-	uint8_t turn, castle_flags, ply, ep_square, capture, gen_flags, piece, stage, mul, dummy;
-	int16_t score;
-	uint16_t move, killer[3], ref[2];
-	int best;
-	int material, pst;
-	int margin, *start, *current;
-	int moves[230];
-};
-extern GData Data[128];	// [ToDo] 数値の意味を確認する.
-extern GData *Current;
-#endif
+
 extern const uint64_t BMagic[64];
 extern const uint64_t RMagic[64];
 extern const int32_t BShift[64];

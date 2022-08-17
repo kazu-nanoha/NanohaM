@@ -23,22 +23,6 @@ Position root_pos;
 
 #define Square(sq) Board->square[sq]
 
-
-// Memo: L159
-constexpr uint8_t UpdateCastling[64] =
-{
-    0xFF^CanCastle_OOO,0xFF,0xFF,0xFF,0xFF^(CanCastle_OO|CanCastle_OOO),
-        0xFF,0xFF,0xFF^CanCastle_OO,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF^CanCastle_ooo,0xFF,0xFF,0xFF,0xFF^(CanCastle_oo|CanCastle_ooo),
-        0xFF,0xFF,0xFF^CanCastle_oo
-};
-
 Position::Position()
 : Current(Data), sp(0), save_sp(0)
 {
@@ -91,11 +75,10 @@ template <bool me> void Position::do_move(int move)
 	Piece(opp) ^= mask_to;
 	BB(piece) |= mask_to;
 	Piece(me) |= mask_to;
-	Next->castle_flags = Current->castle_flags & UpdateCastling[to] & UpdateCastling[from];
 	Next->pst = Current->pst + Pst(piece,to) - Pst(piece,from) - Pst(capture,to);
-	Next->key = Current->key ^ PieceKey[piece][from] ^ PieceKey[piece][to] ^ PieceKey[capture][to] ^ CastleKey[Current->castle_flags] ^ CastleKey[Next->castle_flags];
-	if (capture != IPawn(opp)) Next->pawn_key = Current->pawn_key ^ CastleKey[Current->castle_flags] ^ CastleKey[Next->castle_flags]; // of course we can put a lot of operations inside this "if {}" but the speedup won't be worth the effort
-	else Next->pawn_key = Current->pawn_key ^ PieceKey[IPawn(opp)][to] ^ CastleKey[Current->castle_flags] ^ CastleKey[Next->castle_flags];
+	Next->key = Current->key ^ PieceKey[piece][from] ^ PieceKey[piece][to] ^ PieceKey[capture][to];
+	if (capture != IPawn(opp)) Next->pawn_key = Current->pawn_key; // of course we can put a lot of operations inside this "if {}" but the speedup won't be worth the effort
+	else Next->pawn_key = Current->pawn_key ^ PieceKey[IPawn(opp)][to];
 	Next->material = Current->material - MatCode[capture];
 	if ((Current->material & FlagUnusualMaterial) != 0 && capture >= WhiteKnight) {
 		if (popcnt(BB(WhiteQueen)) <= 2 && popcnt(BB(BlackQueen)) <= 2) {
@@ -151,13 +134,12 @@ non_capture:
 	Piece(me) ^= mask_from;
 	BB(piece) |= mask_to;
 	Piece(me) |= mask_to;
-	Next->castle_flags = Current->castle_flags & UpdateCastling[to] & UpdateCastling[from];
 	Next->pst = Current->pst + Pst(piece,to) - Pst(piece,from);
-	Next->key = Current->key ^ PieceKey[piece][to] ^ PieceKey[piece][from] ^ CastleKey[Current->castle_flags] ^ CastleKey[Next->castle_flags];
+	Next->key = Current->key ^ PieceKey[piece][to] ^ PieceKey[piece][from];
 	Next->material = Current->material;
 	if (piece == IPawn(me)) {
 		Next->ply = 0;
-		Next->pawn_key = Current->pawn_key ^ PieceKey[IPawn(me)][to] ^ PieceKey[IPawn(me)][from] ^ CastleKey[Current->castle_flags] ^ CastleKey[Next->castle_flags];
+		Next->pawn_key = Current->pawn_key ^ PieceKey[IPawn(me)][to] ^ PieceKey[IPawn(me)][from];
 		if (IsEP(move)) {
 			Square(to ^ 8) = 0;
 			u = Bit(to ^ 8);
@@ -189,41 +171,11 @@ non_capture:
 		PawnEntry = PAWNHASH.entry(Next->pawn_key);
 	    prefetch((char *)PawnEntry,_MM_HINT_NTA);
 	} else {
-		if (piece < WhiteKing) Next->pawn_key = Current->pawn_key ^ CastleKey[Current->castle_flags] ^ CastleKey[Next->castle_flags];
+		if (piece < WhiteKing) Next->pawn_key = Current->pawn_key;
 		else {
-			Next->pawn_key = Current->pawn_key ^ PieceKey[piece][to] ^ PieceKey[piece][from] ^ CastleKey[Current->castle_flags] ^ CastleKey[Next->castle_flags];
+			Next->pawn_key = Current->pawn_key ^ PieceKey[piece][to] ^ PieceKey[piece][from];
 			PawnEntry = PAWNHASH.entry(Next->pawn_key);
 	        prefetch((char *)PawnEntry,_MM_HINT_NTA);
-		}
-		if (IsCastling(move)) {
-			int rold, rnew;
-			Next->ply = 0;
-			if (to == 6) {
-			    rold = 7; 
-			    rnew = 5;
-		    } else if (to == 2) {
-                rold = 0; 
-			    rnew = 3;
-		    } else if (to == 62) {
-                rold = 63;
-			    rnew = 61;
-		    } else if (to == 58) {
-                rold = 56; 
-			    rnew = 59;
-			} else {
-				// ありえない.
-				rold = 0; 
-				rnew = 0;
-		    }
-			Add(mask_to,rnew);
-			Square(rold) = 0;
-			Square(rnew) = IRook(me);
-			BB(IRook(me)) ^= Bit(rold);
-			Piece(me) ^= Bit(rold);
-			BB(IRook(me)) |= Bit(rnew);
-			Piece(me) |= Bit(rnew);
-			Next->pst += Pst(IRook(me),rnew) - Pst(IRook(me),rold);
-			Next->key ^= PieceKey[IRook(me)][rnew] ^ PieceKey[IRook(me)][rold];
 		}
 	}
 
@@ -261,32 +213,7 @@ template <bool me> void Position::undo_move(int move)
 	    BB(Current->capture) |= Bit(to);
 	    Piece(opp) |= Bit(to);
 	} else {
-		if (IsCastling(move)) {
-			int rold, rnew;
-			if (to == 6) {
-			    rold = 7; 
-			    rnew = 5;
-		    } else if (to == 2) {
-                rold = 0; 
-			    rnew = 3;
-		    } else if (to == 62) {
-                rold = 63;
-			    rnew = 61;
-		    } else if (to == 58) {
-                rold = 56; 
-			    rnew = 59;
-			} else {
-				// ありえない.
-				rold = 0; 
-				rnew = 0;
-			}
-			Square(rnew) = 0;
-			Square(rold) = IRook(me);
-			Rook(me) ^= Bit(rnew);
-			Piece(me) ^= Bit(rnew);
-			Rook(me) |= Bit(rold);
-			Piece(me) |= Bit(rold);
-		} else if (IsEP(move)) {
+		if (IsEP(move)) {
 			to = to ^ 8;
 			piece = IPawn(opp);
 			Square(to) = piece;
@@ -312,7 +239,6 @@ void Position::do_null() {
 	Next->material = Current->material;
 	Next->pst = Current->pst;
 	Next->ply = 0;
-	Next->castle_flags = Current->castle_flags;
 	Next->ep_square = 0;
 	Next->capture = 0;
 	if (Current->ep_square) Next->key ^= EPKey[file_of(Current->ep_square)];
@@ -366,7 +292,6 @@ template <bool me> int Position::is_legal(int move) {
 		if (Current->ep_square != to) return 0;
 		return 1;
 	}
-	if (IsCastling(move) && Board->square[from] < WhiteKing) return 0;
 	if (IsPromotion(move) && Board->square[from] >= WhiteKnight) return 0;
 	if (piece == IPawn(me)) {
 		if (u & PMove[me][from]) {
@@ -384,33 +309,6 @@ template <bool me> int Position::is_legal(int move) {
 			return 1;
 		} else return 0;
 	} else if (piece == IKing(me)) {
-		if (me == White) {
-		    if (IsCastling(move)) {
-			    if (u & 0x40) {
-                    if (((Current->castle_flags) & CanCastle_OO) == 0) return 0;
-					if (occ & 0x60) return 0;
-					if (Current->att[Black] & 0x70) return 0;
-				} else {
-					if (((Current->castle_flags) & CanCastle_OOO) == 0) return 0;
-					if (occ & 0xE) return 0;
-					if (Current->att[Black] & 0x1C) return 0;
-				}
-				return 1;
-			}
-		} else {
-            if (IsCastling(move)) {
-				if (u & 0x4000000000000000) {
-                    if (((Current->castle_flags) & CanCastle_oo) == 0) return 0;
-					if (occ & 0x6000000000000000) return 0;
-					if (Current->att[White] & 0x7000000000000000) return 0;
-				} else {
-					if (((Current->castle_flags) & CanCastle_ooo) == 0) return 0;
-					if (occ & 0x0E00000000000000) return 0;
-					if (Current->att[White] & 0x1C00000000000000) return 0;
-				}
-				return 1;
-			}
-		}
         if (!(SArea[from] & u)) return 0;
 	    if (Current->att[opp] & u) return 0;
 		return 1;

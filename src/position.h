@@ -16,7 +16,7 @@ This software is released under the MIT License, see "LICENSE.txt".
 struct GPosData {
 	uint64_t key, pawn_key;
 	uint16_t move;
-	uint8_t turn, castle_flags, ply, ep_square, piece, capture;
+	uint8_t turn, ply, ep_square, piece, capture;
 	uint8_t square[64];
 	int pst, material;
 };
@@ -29,7 +29,7 @@ struct GBoard {
 struct GData {
 	uint64_t key, pawn_key, eval_key, att[2], patt[2], passer;
 	bitboard_t xray[2], pin[2], threat, mask;
-	uint8_t turn, castle_flags, ply, ep_square, capture;
+	uint8_t turn, ply, ep_square, capture;
 ///	uint8_t gen_flags;
 	uint8_t piece;
 ///	uint8_t stage;
@@ -84,7 +84,6 @@ public:
 	uint8_t ep_square() const { return Current->ep_square; }
 ///	uint8_t& gen_flags() {return Current->gen_flags; }
 	uint8_t cur_turn() const { return Current->turn; }
-	uint8_t castle_flags() const { return Current->castle_flags; }
 	uint16_t ply() const { return Current->ply; }
 	int16_t score() const { return Current->score; }
 	void set_score(int16_t sc) const { Current->score = sc; }
@@ -94,7 +93,6 @@ public:
 	int sel_depth() const { int d; for (d=1; d<127 && Data[d].att[0] != 0; d++); return d-1; }
 	int height() const { return (int)(Current - Data); }
 	bool is_repeat() const;
-
 
 	template <bool me> int see(int move, int margin);
 

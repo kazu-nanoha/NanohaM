@@ -364,13 +364,6 @@ template <bool me> int * MoveList::gen_quiet_moves(Position& pos, int * list) {
 
     occ = PieceAll;
 	free = ~occ;
-	if (me == White) {
-		if ((pos.castle_flags() & CanCastle_OO) != 0 && !(occ & 0x60) && !(pos.att(Black) & 0x70)) AddHistoryP(IKing(White),4,6,FlagCastling)
-	    if ((pos.castle_flags() & CanCastle_OOO) != 0 && !(occ & 0xE) && !(pos.att(Black) & 0x1C)) AddHistoryP(IKing(White),4,2,FlagCastling)
-	} else {
-		if ((pos.castle_flags() & CanCastle_oo) != 0 && !(occ & 0x6000000000000000) && !(pos.att(White) & 0x7000000000000000)) AddHistoryP(IKing(Black),60,62,FlagCastling)
-	    if ((pos.castle_flags() & CanCastle_ooo) != 0 && !(occ & 0x0E00000000000000) && !(pos.att(White) & 0x1C00000000000000)) AddHistoryP(IKing(Black),60,58,FlagCastling)
-	}
 	for (v = Shift(me,Pawn(me)) & free & (~Line(me,7)); v != 0; Cut(v)) {
         to = lsb(v);
 	    if ((Bit(to) & Line(me,2)) != 0 && !(Square(to + Push(me)))) AddHistoryP(IPawn(me),to - Push(me),to + Push(me),0)
@@ -444,13 +437,6 @@ template <bool me> int * MoveList::gen_delta_moves(Position& pos)
 
     occ = PieceAll;
 	free = ~occ;
-	if (me == White) {
-		if ((pos.castle_flags() & CanCastle_OO) != 0 && !(occ & 0x60) && !(pos.att(Black) & 0x70)) AddCDeltaP(IKing(White),4,6,FlagCastling)
-	    if ((pos.castle_flags() & CanCastle_OOO) != 0 && !(occ & 0xE) && !(pos.att(Black) & 0x1C)) AddCDeltaP(IKing(White),4,2,FlagCastling)
-	} else {
-		if ((pos.castle_flags() & CanCastle_oo) != 0 && !(occ & 0x6000000000000000) && !(pos.att(White) & 0x7000000000000000)) AddCDeltaP(IKing(Black),60,62,FlagCastling)
-	    if ((pos.castle_flags() & CanCastle_ooo) != 0 && !(occ & 0x0E00000000000000) && !(pos.att(White) & 0x1C00000000000000)) AddCDeltaP(IKing(Black),60,58,FlagCastling)
-	}
 	for (v = Shift(me,Pawn(me)) & free & (~Line(me,7)); v != 0; Cut(v)) {
         to = lsb(v);
 	    if ((Bit(to) & Line(me,2)) != 0 && !(Square(to + Push(me)))) AddCDeltaP(IPawn(me),to - Push(me),to + Push(me),0)
