@@ -1493,157 +1493,11 @@ template <bool me> int krppkrx(const GBoard* Board) {
 	}
 	return 32;
 }
-struct GPawnEvalInfo {
-	int king_w, king_b, score;
-	uint64_t patt_w, patt_b, double_att_w, double_att_b;
-};
-
-template <bool me, bool HPopCnt> void Position::eval_pawns(GPawnEntry * PawnEntry, GPawnEvalInfo &PEI) {
-	constexpr bool opp = !me;
-	int kf = file_of(PVarC(PEI, king, me));
-	int kr = rank_of(PVarC(PEI, king, me));
-	int start, inc;
-	if (kf <= 3) {
-		start = std::max(kf - 1, 0);
-		inc = 1;
-	} else {
-		start = std::min(kf + 1, 7);
-		inc = -1;
-	}
-	int shelter = 0;
-	uint64_t mpawns = Pawn(me) & Forward[me][me ? std::min(kr + 1, 7) : std::max(kr - 1, 0)];
-	for (int file = start, i = 0; i < 3; file += inc, i++) {
-		shelter += Shelter[i][CRank(me, NBZ(me, mpawns & File[file]))];
-		int rank;
-		if (Pawn(opp) & File[file]) {
-			int sq = NB(me, Pawn(opp) & File[file]);
-			if ((rank = CRank(opp, sq)) < 6) {
-				if (rank >= 3) shelter += StormBlocked[rank - 3];
-				if (uint64_t u = (PIsolated[file_of(sq)] & Forward[opp][rank_of(sq)] & Pawn(me))) {
-					int square = NB(opp, u);
-					uint64_t att_sq = PAtt[me][square] & PWay[opp][sq]; // may be zero
-					if ((File[file_of(square)] | PIsolated[file_of(square)]) & King(me)) if (!(PVarC(PEI, double_att, me) & att_sq) || (Current->patt[opp] & att_sq)) {
-						if (PWay[opp][square] & Pawn(me)) continue;
-						if (!(PawnAll & PWay[opp][sq] & Forward[me][rank_of(square)])) {
-							if (rank >= 3) {
-								shelter += StormShelterAtt[rank - 3];
-								if (PVarC(PEI, patt, opp) & Bit(sq + Push(opp))) shelter += StormConnected[rank - 3];
-								if (!(PWay[opp][sq] & PawnAll)) shelter += StormOpen[rank - 3];
-							}
-							if (!((File[file_of(sq)] | PIsolated[file_of(sq)]) & King(opp)) && rank <= 4) shelter += StormFree[rank - 1];
-						}
-					}
-				}
-			}
-		} else {
-			shelter += Sa(StormHof, StormHofValue);
-			if (!(Pawn(me) & File[file])) shelter += Sa(StormHof, StormOfValue);
-		}
-	}
-	PawnEntry->shelter[me] = shelter;
-
-	uint64_t b;
-	int min_file = 7, max_file = 0;
-	for (uint64_t u = Pawn(me); u != 0; u ^= b) {
-		int sq = lsb(u);
-		b = Bit(sq);
-		int rank = rank_of(sq);
-		int rrank = CRank(me, sq);
-		int file = file_of(sq);
-		uint64_t way = PWay[me][sq];
-		int next = Square(sq + Push(me));
-		if (file < min_file) min_file = file;
-		if (file > max_file) max_file = file;
-
-		int isolated = !(Pawn(me) & PIsolated[file]);
-		int doubled = ((Pawn(me) & (File[file] ^ b)) != 0);
-		int open = !(PawnAll & way);
-		int up = !(PVarC(PEI, patt, me) & b);
-
-		if (isolated) {
-			if (open) DecV(PEI.score, Ca(Isolated, IsolatedOpen));
-			else {
-				DecV(PEI.score, Ca(Isolated, IsolatedClosed));
-				if (next == IPawn(opp)) DecV(PEI.score, Ca(Isolated, IsolatedBlocked));
-			}
-			if (doubled) {
-				if (open) DecV(PEI.score, Ca(Isolated, IsolatedDoubledOpen));
-				else DecV(PEI.score, Ca(Isolated, IsolatedDoubledClosed));
-			}
-		} else {
-			if (doubled) {
-				if (open) DecV(PEI.score, Ca(Doubled, DoubledOpen));
-				else DecV(PEI.score, Ca(Doubled, DoubledClosed));
-			}
-			if (rrank >= 3 && (b & (File[2] | File[3] | File[4] | File[5])) && next != IPawn(opp) && (PIsolated[file] & Line[rank] & Pawn(me)))
-				IncV(PEI.score, Ca(PawnSpecial, PawnChainLinear) * (rrank - 3) + Ca(PawnSpecial, PawnChain));
-		}
-		int backward = 0;
-		if (!(PSupport[me][sq] & Pawn(me))) {
-			if (isolated) backward = 1;
-			else if (uint64_t v = (PawnAll | PVarC(PEI, patt, opp)) & way) if (IsGreater(me, NB(me, PVarC(PEI, patt, me) & way), NB(me, v))) backward = 1;
-		}
-		if (backward) {
-			if (open) DecV(PEI.score, Ca(Backward, BackwardOpen));
-			else DecV(PEI.score, Ca(Backward, BackwardClosed));
-		} else if (open) if (!(Pawn(opp) & PIsolated[file]) || popcount<HPopCnt>(Pawn(me) & PIsolated[file]) >= popcount<HPopCnt>(Pawn(opp) & PIsolated[file])) IncV(PEI.score,PasserCandidate[rrank]); // IDEA: more precise pawn counting for the case of, say, white e5 candidate with black pawn on f5 or f4...
-		if (up && next == IPawn(opp)) {
-			DecV(PEI.score, Ca(Unprotected, UpBlocked));
-			if (backward) {
-				if (rrank <= 2) { // IDEA (based on weird passer target tuning result): may be score unprotected/backward depending on rank/file?
-					DecV(PEI.score, Ca(Unprotected, PasserTarget));
-					if (rrank <= 1) DecV(PEI.score, Ca(Unprotected, PasserTarget));
-				}
-				for (uint64_t v = PAtt[me][sq] & Pawn(me); v; Cut(v)) if ((PSupport[me][lsb(v)] & Pawn(me)) == b) {
-					DecV(PEI.score, Ca(Unprotected, ChainRoot));
-					break;
-				}
-			}
-		}
-		if (open && !(PIsolated[file] & Forward[me][rank] & Pawn(opp))) {
-			PawnEntry->passer[me] |= (uint8_t)(1 << file);
-			if (rrank <= 2) continue;
-			IncV(PEI.score, PasserGeneral[rrank]);
-			int dist_att = Dist(PVarC(PEI, king, opp), sq + Push(me)); // IDEA: average the distance with the distance to the promotion square? or just use the latter?
-			int dist_def = Dist(PVarC(PEI, king, me), sq + Push(me));
-			IncV(PEI.score, Compose256(0, dist_att * (int)PasserAtt[rrank] + LogDist[dist_att] * (int)PasserAttLog[rrank] - dist_def * (int)PasserDef[rrank] - (int)LogDist[dist_def] * (int)PasserDefLog[rrank]));
-			if (PVarC(PEI, patt, me) & b) IncV(PEI.score, PasserProtected[rrank]);
-			if (!(Pawn(opp) & West[file]) || !(Pawn(opp) & East[file])) IncV(PEI.score, PasserOutside[rrank]);
-		}
-	}
-	uint64_t files = 0;
-	for (int i = 1; i < 7; i++) files |= (Pawn(me) >> (i << 3)) & 0xFF;
-	int file_span = (files ? (msb(files) - lsb(files)) : 0);
-	IncV(PEI.score, Ca(PawnSpecial, PawnFileSpan) * file_span);
-	PawnEntry->draw[me] = (7 - file_span) * std::max(5 - popcount<HPopCnt>(files), 0);
-}
-
-template <bool HPopCnt> void Position::eval_pawn_structure(GPawnEntry * PawnEntry)
-{
-	GPawnEvalInfo PEI;
-	for (size_t i = 0; i < sizeof(GPawnEntry) / sizeof(int); i++) *(((int*)PawnEntry) + i) = 0;
-	PawnEntry->key = Current->pawn_key;
-
-	PEI.patt_w = ShiftW(White, Pawn(White)) | ShiftE(White, Pawn(White));
-	PEI.patt_b = ShiftW(Black, Pawn(Black)) | ShiftE(Black, Pawn(Black));
-	PEI.double_att_w = ShiftW(White, Pawn(White)) & ShiftE(White, Pawn(White));
-	PEI.double_att_b = ShiftW(Black, Pawn(Black)) & ShiftE(Black, Pawn(Black));
-	PEI.king_w = lsb(King(White));
-	PEI.king_b = lsb(King(Black));
-	PEI.score = 0;
-
-	eval_pawns<White, HPopCnt>(PawnEntry, PEI);
-	eval_pawns<Black, HPopCnt>(PawnEntry, PEI);
-
-	PawnEntry->score = PEI.score;
-}
-
 
 struct GEvalInfo {
 	int score, king_w, king_b, mul;
 	uint64_t occ, area_w, area_b, free_w, free_b;
 	uint32_t king_att_w, king_att_b;
-	GPawnEntry * PawnEntry;
 	GMaterial * material;
 };
 
@@ -1822,60 +1676,12 @@ template <bool me, bool HPopCnt> void Position::eval_king(GEvalInfo &EI) {
 	int cnt = Opening(PVarC(EI, king_att, me));
 	int score = Endgame(PVarC(EI, king_att, me));
 	if (cnt >= 2 && (Queen(me) != 0)) {
-		score += (EI.PawnEntry->shelter[opp] * KingShelterQuad)/64;
 		if (uint64_t u = Current->att[me] & PVarC(EI, area, opp) & (~Current->att[opp])) score += popcount<HPopCnt>(u) * KingAttackSquare;
 		if (!(SArea[PVarC(EI, king, opp)] & (~(Piece(opp) | Current->att[me])))) score += KingNoMoves;
 	}
-	int adjusted = ((score * KingAttackScale[cnt]) >> 3) + EI.PawnEntry->shelter[opp];
+	int adjusted = ((score * KingAttackScale[cnt]) >> 3);
 	if (!Queen(me)) adjusted /= 2;
 	IncV(EI.score, adjusted);
-}
-template <bool me, bool HPopCnt> void Position::eval_passer(GEvalInfo &EI) {
-	constexpr bool opp = !me;
-	for (uint64_t u = EI.PawnEntry->passer[me]; u != 0; Cut(u)) {
-		int file = lsb(u);
-		int sq = NB(opp, File[file] & Pawn(me));
-		int rank = CRank(me, sq);
-		Current->passer |= Bit(sq);
-		if (rank <= 2) continue;
-		if (!Square(sq + Push(me))) IncV(EI.score, PasserBlocked[rank]);
-		uint64_t way = PWay[me][sq];
-		int connected = 0, supported = 0, hooked = 0, free = 0;	// , unsupported = 0
-		if (!(way & Piece(opp))) {
-			IncV(EI.score, PasserClear[rank]);
-			if (PWay[opp][sq] & Major(me)) {
-				int square = NB(opp, PWay[opp][sq] & Major(me));
-				if (!(Between[sq][square] & EI.occ)) supported = 1;
-			}
-			if (PWay[opp][sq] & Major(opp)) {
-				int square = NB(opp, PWay[opp][sq] & Major(opp));
-				if (!(Between[sq][square] & EI.occ)) hooked = 1;
-			}
-			for (uint64_t v = PAtt[me][sq - Push(me)] & Pawn(me); v != 0; Cut(v)) {
-				int square = lsb(v);
-				if (!(Pawn(opp) & (File[file_of(square)] | PIsolated[file_of(square)]) & Forward[me][rank_of(square)])) connected++;
-			}
-			if (connected) IncV(EI.score, PasserConnected[rank]);
-			if (!hooked && !(Current->att[opp] & way)) {
-				IncV(EI.score, PasserFree[rank]);
-				free = 1;
-			} else {
-				uint64_t attacked = Current->att[opp] | (hooked ? way : 0);
-				if (supported || (!hooked && connected) || (!(Major(me) & way) && !(attacked & (~Current->att[me])))) IncV(EI.score, PasserSupported[rank]);
-///				else unsupported = 1;
-			}
-		}
-		if (rank == 6) {
-			if ((way & Rook(me)) && !Minor(me) && !Queen(me) && Single(Rook(me))) DecV(EI.score, Compose(0, Sa(PasserSpecial, PasserOpRookBlock)));
-			if (!Major(opp) && (!NonPawnKing(opp) || Single(NonPawnKing(opp)))) {
-				IncV(EI.score, Compose(0, Sa(PasserSpecial, PasserOnePiece)));
-				if (!free) {
-					if (!(SArea[sq + Push(me)] & King(opp))) IncV(EI.score, Compose(0, Sa(PasserSpecial, PasserOpMinorControl)));
-					else IncV(EI.score, Compose(0, Sa(PasserSpecial, PasserOpKingControl)));
-				}
-			}
-		}
-	}
 }
 template <bool me, bool HPopCnt> void Position::eval_pieces(GEvalInfo &EI) {
 	constexpr bool opp = !me;
@@ -2057,18 +1863,12 @@ template <bool HPopCnt> void Position::evaluation() {
 #undef me
 #undef opp
 
-	EI.PawnEntry = PAWNHASH.entry(Current->pawn_key);
-	if (Current->pawn_key != EI.PawnEntry->key) eval_pawn_structure<HPopCnt>(EI.PawnEntry);
-	EI.score += EI.PawnEntry->score;
-
 	eval_king<White, HPopCnt>(EI);
 	eval_king<Black, HPopCnt>(EI);
 	Current->att[White] |= SArea[EI.king_w];
 	Current->att[Black] |= SArea[EI.king_b];
 
-	eval_passer<White, HPopCnt>(EI);
 	eval_pieces<White, HPopCnt>(EI);
-	eval_passer<Black, HPopCnt>(EI);
 	eval_pieces<Black, HPopCnt>(EI);
 
 	if (Current->material & FlagUnusualMaterial) {
@@ -2082,11 +1882,9 @@ template <bool HPopCnt> void Position::evaluation() {
 	if (Current->score > 0) {
 		EI.mul = EI.material->mul[White];
 		if (EI.material->flags & FlagCallEvalEndgame_w) eval_endgame<White, HPopCnt>(EI);
-		Current->score -= (std::min(int(Current->score), 100) * (int)EI.PawnEntry->draw[White]) / 64;
 	} else if (Current->score < 0) {
 		EI.mul = EI.material->mul[Black];
 		if (EI.material->flags & FlagCallEvalEndgame_b) eval_endgame<Black, HPopCnt>(EI);
-		Current->score += (std::min(-Current->score, 100) * (int)EI.PawnEntry->draw[Black]) / 64;
 	} else EI.mul = std::min(EI.material->mul[White], EI.material->mul[Black]);
 	Current->score = (Current->score * EI.mul)/32;
 
