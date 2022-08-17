@@ -245,15 +245,12 @@ template <bool me> int * MoveList::gen_captures(Position& pos) {
 	for (u = Pawn(me) & Line(me,6); u != 0; Cut(u))
     	if (!(Square(lsb(u) + Push(me)))) {
 			AddMove(lsb(u),lsb(u) + Push(me),FlagPQueen,MvvLvaPromotion)
-			if (NAtt[lsb(King(opp))] & Bit(lsb(u) + Push(me))) AddMove(lsb(u),lsb(u) + Push(me),FlagPKnight,MvvLvaPromotionKnight)
 		}
 	for (v = ShiftW(opp,pos.mask()) & Pawn(me) & Line(me,6); v != 0; Cut(v)) {
 		AddMove(lsb(v),lsb(v)+PushE(me),FlagPQueen,MvvLvaPromotionCap(Square(lsb(v)+PushE(me))))
-		if (NAtt[lsb(King(opp))] & Bit(lsb(v) + PushE(me))) AddMove(lsb(v),lsb(v)+PushE(me),FlagPKnight,MvvLvaPromotionKnightCap(Square(lsb(v)+PushE(me))))
 	}
 	for (v = ShiftE(opp,pos.mask()) & Pawn(me) & Line(me,6); v != 0; Cut(v)) {
 		AddMove(lsb(v),lsb(v)+PushW(me),FlagPQueen,MvvLvaPromotionCap(Square(lsb(v)+PushW(me))))
-		if (NAtt[lsb(King(opp))] & Bit(lsb(v) + PushW(me))) AddMove(lsb(v),lsb(v)+PushW(me),FlagPKnight,MvvLvaPromotionKnightCap(Square(lsb(v)+PushE(me))))
 	}
 	if (!(pos.att(me) & pos.mask())) goto finish;
 	for (v = ShiftW(opp,pos.mask()) & Pawn(me) & (~Line(me,6)); v != 0; Cut(v)) AddCaptureP(IPawn(me),lsb(v),lsb(v)+PushE(me),0)

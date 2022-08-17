@@ -1706,9 +1706,6 @@ void send_pv(Position& pos, int depth, int alpha, int beta, int score)
         pv_string[cur++] = ((move >> 3) & 7) + '1';
         if (IsPromotion(move)) {
             if ((move & 0xF000) == FlagPQueen)  pv_string[cur++] = 'q';
-            else if ((move & 0xF000) == FlagPRook)   pv_string[cur++] = 'r';
-            else if ((move & 0xF000) == FlagPLight || (move & 0xF000) == FlagPDark) pv_string[cur++] = 'b';
-            else if ((move & 0xF000) == FlagPKnight) pv_string[cur++] = 'n';
 		}
         pv_string[cur] = 0;
 	}
@@ -1775,9 +1772,6 @@ void send_multipv(Position& pos, int depth, int curr_number) {
         	pv_string[cur++] = ((move >> 3) & 7) + '1';
         	if (IsPromotion(move)) {
             	if ((move & 0xF000) == FlagPQueen)  pv_string[cur++] = 'q';
-            	else if ((move & 0xF000) == FlagPRook)   pv_string[cur++] = 'r';
-            	else if ((move & 0xF000) == FlagPLight || (move & 0xF000) == FlagPDark) pv_string[cur++] = 'b';
-            	else if ((move & 0xF000) == FlagPKnight) pv_string[cur++] = 'n';
 			}
         	pv_string[cur] = 0;
 		}

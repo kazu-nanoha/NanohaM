@@ -108,10 +108,10 @@ constexpr uint32_t Low32(uint64_t x) { return static_cast<uint32_t>(x); }
 #define WhiteKing 14
 #define BlackKing 15
 
-#define FlagPKnight 0x4000
-#define FlagPLight 0x6000
-#define FlagPDark 0x8000
-#define FlagPRook 0xA000
+///#define FlagPKnight 0x4000
+///#define FlagPLight 0x6000
+///#define FlagPDark 0x8000
+///#define FlagPRook 0xA000
 #define FlagPQueen 0xC000
 
 constexpr bool IsPromotion(Move move)

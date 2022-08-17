@@ -1168,9 +1168,6 @@ void move_to_string(int move, char string[])
     string[pos++] = ((move >> 3) & 7) + '1';
     if (IsPromotion(move)) {
         if ((move & 0xF000) == FlagPQueen)  string[pos++] = 'q';
-        else if ((move & 0xF000) == FlagPRook)   string[pos++] = 'r';
-        else if ((move & 0xF000) == FlagPLight || (move & 0xF000) == FlagPDark) string[pos++] = 'b';
-        else if ((move & 0xF000) == FlagPKnight) string[pos++] = 'n';
     }
     string[pos] = 0;
 }
@@ -1182,11 +1179,6 @@ int move_from_string(const char string[]) {
     move = (from << 6) | to;
     if (string[4] != 0) {
         if (string[4] == 'q') move |= FlagPQueen;
-        else if (string[4] == 'r') move |= FlagPRook;
-        else if (string[4] == 'b') {
-			if (Odd(to ^ rank_of(to))) move |= FlagPLight;
-			else move |= FlagPDark;
-		} else if (string[4] == 'n') move |= FlagPKnight;
     }
     return move;
 }
