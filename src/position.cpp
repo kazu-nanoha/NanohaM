@@ -47,14 +47,12 @@ template <bool me> void Position::do_move(int move)
 {
 	constexpr bool opp = !me;
 	GEntry * Entry;
-	GPawnEntry * PawnEntry;
 	int from, to, piece, capture;
 	GData * Next;
-	uint64_t u, mask_from, mask_to;
+	uint64_t mask_from, mask_to;
 
 	to = To(move);
 	Next = Current + 1;
-	Next->ep_square = 0;
 	capture = Square(to);
     if (!(capture)) {
 		Next->capture = 0;
@@ -77,8 +75,6 @@ template <bool me> void Position::do_move(int move)
 	Piece(me) |= mask_to;
 	Next->pst = Current->pst + Pst(piece,to) - Pst(piece,from) - Pst(capture,to);
 	Next->key = Current->key ^ PieceKey[piece][from] ^ PieceKey[piece][to] ^ PieceKey[capture][to];
-	if (capture != IPawn(opp)) Next->pawn_key = Current->pawn_key; // of course we can put a lot of operations inside this "if {}" but the speedup won't be worth the effort
-	else Next->pawn_key = Current->pawn_key ^ PieceKey[IPawn(opp)][to];
 	Next->material = Current->material - MatCode[capture];
 	if ((Current->material & FlagUnusualMaterial) != 0 && capture >= WhiteKnight) {
 		if (popcnt(BB(WhiteQueen)) <= 2 && popcnt(BB(BlackQueen)) <= 2) {
@@ -88,7 +84,6 @@ template <bool me> void Position::do_move(int move)
 		}
 	}
 	if (piece == IPawn(me)) {
-		Next->pawn_key ^= PieceKey[IPawn(me)][from] ^ PieceKey[piece][to];
 		if (IsPromotion(move)) {
 			piece = Promotion(move,me);
 			Square(to) = piece;
@@ -101,20 +96,9 @@ template <bool me> void Position::do_move(int move)
 			BB(piece) |= mask_to;
 			Next->pst += Pst(piece,to) - Pst(IPawn(me),to);
 			Next->key ^= PieceKey[piece][to] ^ PieceKey[IPawn(me)][to];
-			Next->pawn_key ^= PieceKey[IPawn(me)][to];
 		}
-		PawnEntry = PAWNHASH.entry(Next->pawn_key);
-	    prefetch((char *)PawnEntry,_MM_HINT_NTA);
-	} else if (piece >= WhiteKing) {
-		Next->pawn_key ^= PieceKey[piece][from] ^ PieceKey[piece][to];
-		PawnEntry = PAWNHASH.entry(Next->pawn_key);
-	    prefetch((char *)PawnEntry,_MM_HINT_NTA);
-	} else if (capture < WhiteKnight) {
-		PawnEntry = PAWNHASH.entry(Next->pawn_key);
-	    prefetch((char *)PawnEntry,_MM_HINT_NTA);
 	}
 	if (!(Next->material & FlagUnusualMaterial)) prefetch((char *)(Material + Next->material), _MM_HINT_NTA); 
-	if (Current->ep_square) Next->key ^= EPKey[file_of(Current->ep_square)];
 	Next->turn = Current->turn ^ 1;
 	Next->key ^= TurnKey;
 	Entry = TT.top(Next->key);
@@ -139,17 +123,7 @@ non_capture:
 	Next->material = Current->material;
 	if (piece == IPawn(me)) {
 		Next->ply = 0;
-		Next->pawn_key = Current->pawn_key ^ PieceKey[IPawn(me)][to] ^ PieceKey[IPawn(me)][from];
-		if (IsEP(move)) {
-			Square(to ^ 8) = 0;
-			u = Bit(to ^ 8);
-			Next->key ^= PieceKey[IPawn(opp)][to ^ 8];
-			Next->pawn_key ^= PieceKey[IPawn(opp)][to ^ 8];
-			Next->pst -= Pst(IPawn(opp),to ^ 8);
-			Pawn(opp) &= ~u;
-			Piece(opp) &= ~u;
-			Next->material -= MatCode[IPawn(opp)];
-		} else if (IsPromotion(move)) {
+		if (IsPromotion(move)) {
 			piece = Promotion(move,me);
 			Square(to) = piece;
 		    Next->material += MatCode[piece] - MatCode[IPawn(me)];
@@ -161,25 +135,9 @@ non_capture:
 			BB(piece) |= mask_to;
 			Next->pst += Pst(piece,to) - Pst(IPawn(me),to);
 			Next->key ^= PieceKey[piece][to] ^ PieceKey[IPawn(me)][to];
-			Next->pawn_key ^= PieceKey[IPawn(me)][to];
-		} else if ((to ^ from) == 16) {
-			if (PAtt[me][(to + from) >> 1] & Pawn(opp)) {
-				Next->ep_square = (to + from) >> 1;
-				Next->key ^= EPKey[file_of(Next->ep_square)];
-			}
-		}
-		PawnEntry = PAWNHASH.entry(Next->pawn_key);
-	    prefetch((char *)PawnEntry,_MM_HINT_NTA);
-	} else {
-		if (piece < WhiteKing) Next->pawn_key = Current->pawn_key;
-		else {
-			Next->pawn_key = Current->pawn_key ^ PieceKey[piece][to] ^ PieceKey[piece][from];
-			PawnEntry = PAWNHASH.entry(Next->pawn_key);
-	        prefetch((char *)PawnEntry,_MM_HINT_NTA);
 		}
 	}
 
-	if (Current->ep_square) Next->key ^= EPKey[file_of(Current->ep_square)];
 	Next->turn = opp;
 	Next->key ^= TurnKey;
 	Entry = TT.top(Next->key);
@@ -212,14 +170,6 @@ template <bool me> void Position::undo_move(int move)
 	if (Current->capture) {
 	    BB(Current->capture) |= Bit(to);
 	    Piece(opp) |= Bit(to);
-	} else {
-		if (IsEP(move)) {
-			to = to ^ 8;
-			piece = IPawn(opp);
-			Square(to) = piece;
-			Piece(opp) |= Bit(to);
-			Pawn(opp) |= Bit(to);
-		}
 	}
 	Current--;
 	sp--;
@@ -233,15 +183,12 @@ void Position::do_null() {
 	Next->key = Current->key ^ TurnKey;
 	Entry = TT.top(Next->key);
 	prefetch((char *)Entry,_MM_HINT_NTA);
-	Next->pawn_key = Current->pawn_key;
 	Next->eval_key = 0;
 	Next->turn = Current->turn ^ 1;
 	Next->material = Current->material;
 	Next->pst = Current->pst;
 	Next->ply = 0;
-	Next->ep_square = 0;
 	Next->capture = 0;
-	if (Current->ep_square) Next->key ^= EPKey[file_of(Current->ep_square)];
 	sp++;	
 	Next->att[White] = Current->att[White];
 	Next->att[Black] = Current->att[Black];
@@ -286,11 +233,6 @@ template <bool me> int Position::is_legal(int move) {
 	if (piece >= WhiteLight && piece < WhiteKing) {
 	    if ((QMask[from] & u) == 0) return 0;
 		if (Between[from][to] & occ) return 0;
-	}
-	if (IsEP(move)) {
-		if (piece >= WhiteKnight) return 0;
-		if (Current->ep_square != to) return 0;
-		return 1;
 	}
 	if (IsPromotion(move) && Board->square[from] >= WhiteKnight) return 0;
 	if (piece == IPawn(me)) {
@@ -758,7 +700,6 @@ template <bool me> int Position::see(int move, int margin) {
 	if (Current->xray[me] & Bit(from)) return 1;
 	if ((Current->pin[me] & Bit(from)) != 0 && piece <= SeeValue[WhiteDark]) return 1;
 	if (piece > (SeeValue[WhiteKing] >> 1)) return 1;
-	if (IsEP(move)) return 1;
 	if (!(Current->att[opp] & Bit(to))) return 1;
 	att = PAtt[me][to] & Pawn(opp);
 	if (att != 0 && delta + margin > SeeValue[WhitePawn]) return 0;

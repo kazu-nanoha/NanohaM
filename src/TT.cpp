@@ -20,11 +20,9 @@ namespace {
 }
 
 PVHash PVHASH;
-PawnHash PAWNHASH;
 TranspositionTable TT;
 
 GPVEntry PVHash::hash_table[PVHash::hash_size];
-GPawnEntry PawnHash::hash_table[PawnHash::hash_size];
 GEntry * TranspositionTable::hash_table;
 uint16_t TranspositionTable::date;
 uint64_t TranspositionTable::hash_size = initial_hash_size;
@@ -46,11 +44,6 @@ GPVEntry * PVHash::probe(uint64_t key)
         }
     }
     return NULL;
-}
-
-GPawnEntry * PawnHash::entry(uint64_t key)
-{
-	return hash_table + (key & hash_mask);
 }
 
 void TranspositionTable::init()

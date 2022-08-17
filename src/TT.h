@@ -13,13 +13,6 @@ This software is released under the MIT License, see "LICENSE.txt".
 #include <cstring>
 #include "types.h"
 
-struct GPawnEntry {
-	uint64_t key;
-	int16_t shelter[2];
-	uint8_t passer[2], draw[2];
-	int score;
-};
-
 struct GPVEntry {
 	uint32_t key32;
 	uint16_t date;
@@ -43,19 +36,8 @@ struct GEntry {
 	uint8_t high_depth;
 };
 
-static_assert(sizeof(GPawnEntry)==24, "GPawnEntry size error!");
 static_assert(sizeof(GPVEntry)==24, "GPVEntry size error!");
 static_assert(sizeof(GEntry)==16, "GEntry size error!");
-
-struct PawnHash {
-	static void init();
-	static GPawnEntry * entry(uint64_t key);
-	static void clear() {memset(hash_table, 0, hash_size * sizeof(GPawnEntry));}
-
-	static constexpr uint32_t hash_size = (1024 * 1024);
-	static constexpr uint32_t hash_mask = (1024 * 1024 - 1);
-	static GPawnEntry hash_table[hash_size];
-};
 
 constexpr uint32_t pv_cluster_size = 4;
 struct PVHash {
@@ -87,7 +69,6 @@ struct TranspositionTable {
 };
 
 extern PVHash PVHASH;
-extern PawnHash PAWNHASH;
 extern TranspositionTable TT;
 
 #endif

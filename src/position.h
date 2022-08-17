@@ -14,9 +14,9 @@ This software is released under the MIT License, see "LICENSE.txt".
 
 // Memo: L427
 struct GPosData {
-	uint64_t key, pawn_key;
+	uint64_t key;
 	uint16_t move;
-	uint8_t turn, ply, ep_square, piece, capture;
+	uint8_t turn, ply, piece, capture;
 	uint8_t square[64];
 	int pst, material;
 };
@@ -27,9 +27,9 @@ struct GBoard {
 };
 
 struct GData {
-	uint64_t key, pawn_key, eval_key, att[2], patt[2], passer;
+	uint64_t key, eval_key, att[2], patt[2], passer;
 	bitboard_t xray[2], pin[2], threat, mask;
-	uint8_t turn, ply, ep_square, capture;
+	uint8_t turn, ply, capture;
 ///	uint8_t gen_flags;
 	uint8_t piece;
 ///	uint8_t stage;
@@ -47,8 +47,6 @@ struct GData {
 };
 
 struct GEvalInfo;
-struct GPawnEntry;
-struct GPawnEvalInfo;
 
 class Position {
 	Position(const Position&) = delete;
@@ -81,7 +79,6 @@ public:
 	void set_mask(bitboard_t bb) { Current->mask = bb; }
 	bitboard_t xray(int me) { return Current->xray[me]; }
 	uint64_t att(int turn) const { return Current->att[turn]; }
-	uint8_t ep_square() const { return Current->ep_square; }
 ///	uint8_t& gen_flags() {return Current->gen_flags; }
 	uint8_t cur_turn() const { return Current->turn; }
 	uint16_t ply() const { return Current->ply; }
@@ -97,14 +94,11 @@ public:
 	template <bool me> int see(int move, int margin);
 
 	// evaluate.cpp
-	template <bool me, bool HPopCnt> void eval_pawns(GPawnEntry * PawnEntry, GPawnEvalInfo &PEI);
-	template <bool HPopCnt> void eval_pawn_structure(GPawnEntry * PawnEntry);
 	template <bool me, bool HPopCnt> void eval_queens(GEvalInfo &EI);
 	template <bool me, bool HPopCnt> void eval_rooks(GEvalInfo &EI);
 	template <bool me, bool HPopCnt> void eval_bishops(GEvalInfo &EI);
 	template <bool me, bool HPopCnt> void eval_knights(GEvalInfo &EI);
 	template <bool me, bool HPopCnt> void eval_king(GEvalInfo &EI);
-	template <bool me, bool HPopCnt> void eval_passer(GEvalInfo &EI);
 	template <bool me, bool HPopCnt> void eval_pieces(GEvalInfo &EI);
 	template <bool me, bool HPopCnt> void eval_endgame(GEvalInfo &EI);
 	template <bool HPopCnt> void eval_unusual_material(const int turn, GEvalInfo &EI);
@@ -130,9 +124,7 @@ inline bool Position::is_repeat() const
 
 
 #define Check(me) ((pos.att((me) ^ 1) & King(me)) != 0)
-#define IsIllegal(me,move) (((pos.xray(opp) & Bit(From(move))) != 0 && !(Bit(To(move)) & FullLine[lsb(King(me))][From(move)])) \
-	|| (IsEP(move) && (Line[rank_of(From(move))] & King(me)) != 0 && (Line[rank_of(From(move))] & Major(opp)) != 0 && \
-	(RookAttacks(lsb(King(me)),PieceAll ^ Bit(From(move)) ^ Bit(pos.ep_square() - Push(me))) & Major(opp)) != 0))
+#define IsIllegal(me,move) (((pos.xray(opp) & Bit(From(move))) != 0 && !(Bit(To(move)) & FullLine[lsb(King(me))][From(move)])) )
 #define IsRepetition(margin,move) ((margin) > 0 && Current->ply >= 2 && (Current-1)->move == ((To(move) << 6) | From(move)) && !(Square(To(move))) && !((move) & 0xF000))
 
 #if 0

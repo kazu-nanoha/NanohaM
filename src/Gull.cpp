@@ -1180,7 +1180,6 @@ int move_from_string(const char string[]) {
     from = ((string[1] - '1') * 8) + (string[0] - 'a');
     to  = ((string[3] - '1') * 8) + (string[2] - 'a');
     move = (from << 6) | to;
-    if (Current->ep_square && to == Current->ep_square) move |= FlagEP;
     if (string[4] != 0) {
         if (string[4] == 'q') move |= FlagPQueen;
         else if (string[4] == 'r') move |= FlagPRook;
@@ -1593,14 +1592,13 @@ HANDLE CreateChildProcess(int child_id) {
 		CloseHandle(piProcInfo.hThread);
 		return piProcInfo.hProcess;
 	} else {
-		fprintf(stdout, "Error %d\n", GetLastError());
+		fprintf(stdout, "Error %ld\n", GetLastError());
 		return NULL;
 	}
 }
 
 int main(int argc, char *argv[]) {
 	DWORD p;
-	int i;
 
 	if (argc >= 2) if (!memcmp(argv[1], "child", 5)) {
 		child = 1; parent = 0;

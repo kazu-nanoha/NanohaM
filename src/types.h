@@ -26,8 +26,6 @@ constexpr bool Odd(int x) { return (((x)&1) != 0); }
 #define Opening(x) (int16_t((x)&0xFFFF))
 #define Endgame(x) ((((x) >> 15) & 1) + (int16_t((x) >> 16)))
 
-///#define File(x) ((x) & 7)
-///#define Rank(x) ((x) >> 3)
 constexpr int file_of(int x) { return ((x)&7); }
 constexpr int rank_of(int x) { return ((x) >> 3); }
 #define CRank(me, x) ((me) ? (7 - rank_of(x)) : rank_of(x))
@@ -110,13 +108,6 @@ constexpr uint32_t Low32(uint64_t x) { return static_cast<uint32_t>(x); }
 #define WhiteKing 14
 #define BlackKing 15
 
-///#define CanCastle_OO 1
-///#define CanCastle_oo 2
-///#define CanCastle_OOO 4
-///#define CanCastle_ooo 8
-
-///#define FlagCastling 0x1000
-#define FlagEP 0x2000
 #define FlagPKnight 0x4000
 #define FlagPLight 0x6000
 #define FlagPDark 0x8000
@@ -127,8 +118,6 @@ constexpr bool IsPromotion(Move move)
 {
 	return ((move & 0xC000) != 0);
 }
-///constexpr bool IsCastling(Move move) { return (((move)&FlagCastling) != 0); }
-constexpr bool IsEP(Move move) { return (((move)&0xF000) == FlagEP); }
 constexpr int Promotion(Move move, int side) { return ((side) + (((move)&0xF000) >> 12)); }
 
 #define BishopAttacks(sq, occ)      \
@@ -246,7 +235,6 @@ extern uint64_t FullLine[64][64];
 // Memo: L479
 extern uint64_t TurnKey;
 extern uint64_t PieceKey[16][64];
-extern uint64_t EPKey[8];
 extern uint16_t date;
 
 // Memo: L510
