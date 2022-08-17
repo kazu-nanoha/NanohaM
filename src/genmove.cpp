@@ -242,8 +242,6 @@ template <bool me> int * MoveList::gen_captures(Position& pos) {
 	uint64_t u, v;
 	int* list = moves;
 
-	if (pos.ep_square())
-		for (v = PAtt[opp][pos.ep_square()] & Pawn(me); v != 0; Cut(v)) AddMove(lsb(v),pos.ep_square(),FlagEP,MvvLva[IPawn(me)][IPawn(opp)])
 	for (u = Pawn(me) & Line(me,6); u != 0; Cut(u))
     	if (!(Square(lsb(u) + Push(me)))) {
 			AddMove(lsb(u),lsb(u) + Push(me),FlagPQueen,MvvLvaPromotion)
@@ -296,10 +294,6 @@ template <bool me> int * MoveList::gen_evasions(Position& pos) {
 		for (; esc != 0; Cut(esc)) AddCaptureP(IKing(me),king,lsb(esc),0)
 		*list = 0;
 		return list;
-	}
-	if (Bit(att_sq) & pos.mask()) {
-	    if ((pos.ep_square()) != 0 && pos.ep_square() == att_sq + Push(me))
-		    for (u = PAtt[opp][att_sq + Push(me)] & Pawn(me); u != 0; Cut(u)) AddMove(lsb(u),att_sq + Push(me),FlagEP,MvvLva[IPawn(me)][IPawn(opp)])
 	}
 	for (u = PAtt[opp][att_sq] & Pawn(me); u != 0; Cut(u)) {
         from = lsb(u);
