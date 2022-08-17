@@ -18,9 +18,9 @@
 #include <mutex>
 
 #include <intrin.h>
-
-#include "setjmp.h"
-#include "windows.h"
+#include <setjmp.h>
+#define NOMINMAX
+#include <windows.h>
 
 #include "types.h"
 #include "misc.h"
@@ -202,9 +202,11 @@ const int MvvLvaAttackerKB[16] = {0, 0, 9, 9, 7, 7, 5, 5, 5, 5, 3, 3, 1, 1, 11, 
 ///#define KillerOneScore ((0xFF << 16) | (1 << 24))
 ///#define KillerTwoScore (0xFF << 16)
 
-///#define halt_check if ((Current - Data) >= 126) {evaluate(); return Current->score;} \
-///    if (Current->ply >= 100) return 0; \
-///	for (i = 4; i <= Current->ply; i+= 2) if (Stack[sp-i] == Current->key) return 0
+#if 0
+#define halt_check if ((Current - Data) >= 126) {evaluate(); return Current->score;} \
+    if (Current->ply >= 100) return 0; \
+	for (i = 4; i <= Current->ply; i+= 2) if (Stack[sp-i] == Current->key) return 0
+#endif
 ///#define ExtFlag(ext) ((ext) << 16)
 ///#define Ext(flags) (((flags) >> 16) & 0xF)
 ///#define FlagHashCheck (1 << 20) // first 20 bits are reserved for the hash killer and extension
@@ -298,7 +300,7 @@ int16_t History[16 * 64];
 #define HistoryP(piece,from,to) ((Convert(HistoryScore(piece,from,to) & 0xFF00,int)/Convert(HistoryScore(piece,from,to) & 0x00FF,int)) << 16)
 #define History(from,to) HistoryP(Square(from),from,to)
 #define HistoryM(move) HistoryScore(Square(From(move)),From(move),To(move))
-#define HistoryInc(depth) Min(((depth) >> 1) * ((depth) >> 1), 64)
+#define HistoryInc(depth) std::min(((depth) >> 1) * ((depth) >> 1), 64)
 #define HistoryGood(move) if ((HistoryM(move) & 0x00FF) >= 256 - HistoryInc(depth)) \
 	HistoryM(move) = ((HistoryM(move) & 0xFEFE) >> 1) + ((HistoryInc(depth) << 8) | HistoryInc(depth)); \
 	else HistoryM(move) += ((HistoryInc(depth) << 8) | HistoryInc(depth))
@@ -498,7 +500,7 @@ void init();
 #ifndef W32_BUILD
 int lsb(uint64_t x) {
 #if defined(__GNUC__)
-	unsigned int y;
+	unsigned long y;
 #else
 	unsigned long y;
 #endif
@@ -508,7 +510,7 @@ int lsb(uint64_t x) {
 
 int msb(uint64_t x) {
 #if defined(__GNUC__)
-	unsigned int y;
+	unsigned long y;
 #else
 	unsigned long y;
 #endif
@@ -572,21 +574,21 @@ template <bool HPopCnt> __forceinline int popcount(uint64_t x) {
 }
 #endif
 
-int MinF(int x, int y) { return Min(x, y); }
-int MaxF(int x, int y) { return Max(x, y); }
-double MinF(double x, double y) { return Min(x, y); }
-double MaxF(double x, double y) { return Max(x, y); }
+int MinF(int x, int y) { return std::min(x, y); }
+int MaxF(int x, int y) { return std::max(x, y); }
+double MinF(double x, double y) { return std::min(x, y); }
+double MaxF(double x, double y) { return std::max(x, y); }
 
 uint16_t rand16() {
-	seed = (seed * Convert(6364136223846793005,uint64_t)) + Convert(1442695040888963407,uint64_t);
-	return Convert((seed >> 32) & 0xFFFF,uint16_t);
+	seed = (seed * 6364136223846793005ULL) + 1442695040888963407ULL;
+	return (uint16_t)((seed >> 32) & 0xFFFF);
 }
 
 uint64_t BMagicAttacks(int i, uint64_t occ)
 {
     uint64_t att = 0;
-	for (uint64_t u = BMask[i]; T(u); Cut(u)) {
-        if (F(Between[i][lsb(u)] & occ))
+	for (uint64_t u = BMask[i]; u != 0; Cut(u)) {
+        if (!(Between[i][lsb(u)] & occ))
             att |= Between[i][lsb(u)] | Bit(lsb(u));
 	}
 	return att;
@@ -595,8 +597,8 @@ uint64_t BMagicAttacks(int i, uint64_t occ)
 uint64_t RMagicAttacks(int i, uint64_t occ)
 {
     uint64_t att = 0;
-	for (uint64_t u = RMask[i]; T(u); Cut(u)) {
-	    if (F(Between[i][lsb(u)] & occ))
+	for (uint64_t u = RMask[i]; u != 0; Cut(u)) {
+	    if (!(Between[i][lsb(u)] & occ))
 	        att |= Between[i][lsb(u)] | Bit(lsb(u));
 	}
 	return att;
@@ -604,10 +606,13 @@ uint64_t RMagicAttacks(int i, uint64_t occ)
 
 uint64_t rand64()
 {
-	uint64_t key = Convert(rand16(),uint64_t); key <<= 16;
-	key |= Convert(rand16(),uint64_t); key <<= 16;
-	key |= Convert(rand16(),uint64_t); key <<= 16;
-	return key | Convert(rand16(),uint64_t);
+	uint64_t key = uint64_t(rand16());
+	key <<= 16;
+	key |= uint64_t(rand16());
+	key <<= 16;
+	key |= uint64_t(rand16());
+	key <<= 16;
+	return key | uint64_t(rand16());
 }
 
 void init_misc() {
@@ -623,28 +628,28 @@ void init_misc() {
 
 	for (i = 0; i < 64; i++) for (j = 0; j < 64; j++) if (i != j) {
 		u = Bit(j);
-		if (File(i) == File(j)) VLine[i] |= u;
-		if (Rank(i) == Rank(j)) HLine[i] |= u;
+		if (file_of(i) == file_of(j)) VLine[i] |= u;
+		if (rank_of(i) == rank_of(j)) HLine[i] |= u;
 		if (NDiag(i) == NDiag(j)) NDiag[i] |= u;
 		if (SDiag(i) == SDiag(j)) SDiag[i] |= u;
 		if (Dist(i,j) <= 2) {
 			DArea[i] |= u;
 			if (Dist(i,j) <= 1) SArea[i] |= u;
-			if (Abs(Rank(i)-Rank(j)) + Abs(File(i)-File(j)) == 3) NAtt[i] |= u;
+			if (std::abs(rank_of(i)-rank_of(j)) + std::abs(file_of(i)-file_of(j)) == 3) NAtt[i] |= u;
 		}
 		if (j == i + 8) PMove[0][i] |= u;
 		if (j == i - 8) PMove[1][i] |= u;
-		if (Abs(File(i) - File(j)) == 1) {
-			if (Rank(j) >= Rank(i)) {
+		if (std::abs(file_of(i) - file_of(j)) == 1) {
+			if (rank_of(j) >= rank_of(i)) {
 				PSupport[1][i] |= u;
-				if (Rank(j) - Rank(i) == 1) PAtt[0][i] |= u;
+				if (rank_of(j) - rank_of(i) == 1) PAtt[0][i] |= u;
 			} 
-			if (Rank(j) <= Rank(i)) {
+			if (rank_of(j) <= rank_of(i)) {
 				PSupport[0][i] |= u;
-				if (Rank(i) - Rank(j) == 1) PAtt[1][i] |= u;
+				if (rank_of(i) - rank_of(j) == 1) PAtt[1][i] |= u;
 			}
-		} else if (File(i) == File(j)) {
-			if (Rank(j) > Rank(i)) PWay[0][i] |= u;
+		} else if (file_of(i) == file_of(j)) {
+			if (rank_of(j) > rank_of(i)) PWay[0][i] |= u;
 			else PWay[1][i] |= u;
 		}
 	}
@@ -654,10 +659,10 @@ void init_misc() {
 		QMask[i] = RMask[i] | BMask[i];
 		BMagicMask[i] = BMask[i] & Interior;
 		RMagicMask[i] = RMask[i];
-		if (File(i) > 0) RMagicMask[i] &= ~File[0];
-		if (Rank(i) > 0) RMagicMask[i] &= ~Line[0];
-		if (File(i) < 7) RMagicMask[i] &= ~File[7];
-		if (Rank(i) < 7) RMagicMask[i] &= ~Line[7];
+		if (file_of(i) > 0) RMagicMask[i] &= ~File[0];
+		if (rank_of(i) > 0) RMagicMask[i] &= ~Line[0];
+		if (file_of(i) < 7) RMagicMask[i] &= ~File[7];
+		if (rank_of(i) < 7) RMagicMask[i] &= ~Line[7];
 		for (j = 0; j < 64; j++) if (NAtt[i] & NAtt[j]) Add(NArea[i],j);
 	}
 	for (i = 0; i < 8; i++) {
@@ -675,25 +680,25 @@ void init_misc() {
 		if (i < 7) PIsolated[i] |= File[i + 1];
 	}
 	for (i = 0; i < 64; i++) {
-		for (u = QMask[i]; T(u); Cut(u)) {
+		for (u = QMask[i]; u != 0; Cut(u)) {
 			j = lsb(u);
-			k = Sgn(Rank(j)-Rank(i));
-			l = Sgn(File(j)-File(i));
+			k = Sgn(rank_of(j)-rank_of(i));
+			l = Sgn(file_of(j)-file_of(i));
 			for (n = i + 8 * k + l; n != j; n += (8 * k + l)) Add(Between[i][j],n);
 		}
-		for (u = BMask[i]; T(u); Cut(u)) {
+		for (u = BMask[i]; u != 0; Cut(u)) {
 			j = lsb(u);
 			FullLine[i][j] = BMask[i] & BMask[j];
 		}
-		for (u = RMask[i]; T(u); Cut(u)) {
+		for (u = RMask[i]; u != 0; Cut(u)) {
 			j = lsb(u);
 			FullLine[i][j] = RMask[i] & RMask[j];
 		}
 		BishopForward[0][i] |= PWay[0][i];
 		BishopForward[1][i] |= PWay[1][i];
 		for (j = 0; j < 64; j++) {
-			if ((PWay[1][j] | Bit(j)) & BMask[i] & Forward[0][Rank(i)]) BishopForward[0][i] |= Bit(j);
-			if ((PWay[0][j] | Bit(j)) & BMask[i] & Forward[1][Rank(i)]) BishopForward[1][i] |= Bit(j);
+			if ((PWay[1][j] | Bit(j)) & BMask[i] & Forward[0][rank_of(i)]) BishopForward[0][i] |= Bit(j);
+			if ((PWay[0][j] | Bit(j)) & BMask[i] & Forward[1][rank_of(i)]) BishopForward[1][i] |= Bit(j);
 		}
 	}
 
@@ -727,28 +732,28 @@ void init_magic() {
 	uint64_t u;
 	for (i = 0; i < 64; i++) {
 		bits = 64 - BShift[i];
-		for (u = BMagicMask[i], j = 0; T(u); Cut(u), j++) bit_list[j] = lsb(u);
+		for (u = BMagicMask[i], j = 0; u != 0; Cut(u), j++) bit_list[j] = lsb(u);
 		for (j = 0; j < Bit(bits); j++) {
 			u = 0;
 			for (k = 0; k < bits; k++)
 				if (Odd(j >> k)) Add(u,bit_list[k]);
 #ifndef HNI
-			index = Convert(BOffset[i] + ((BMagic[i] * u) >> BShift[i]),int);
+			index = int(BOffset[i] + ((BMagic[i] * u) >> BShift[i]));
 #else
-			index = Convert(BOffset[i] + _pext_u64(u,BMagicMask[i]),int);
+			index = int(BOffset[i] + _pext_u64(u,BMagicMask[i]));
 #endif
             MagicAttacks[index] = BMagicAttacks(i,u);
 		}
 		bits = 64 - RShift[i];
-		for (u = RMagicMask[i], j = 0; T(u); Cut(u), j++) bit_list[j] = lsb(u);
+		for (u = RMagicMask[i], j = 0; u != 0; Cut(u), j++) bit_list[j] = lsb(u);
 		for (j = 0; j < Bit(bits); j++) {
 			u = 0;
 			for (k = 0; k < bits; k++)
 				if (Odd(j >> k)) Add(u,bit_list[k]);
 #ifndef HNI
-			index = Convert(ROffset[i] + ((RMagic[i] * u) >> RShift[i]),int);
+			index = int(ROffset[i] + ((RMagic[i] * u) >> RShift[i]));
 #else
-			index = Convert(ROffset[i] + _pext_u64(u,RMagicMask[i]),int);
+			index = int(ROffset[i] + _pext_u64(u,RMagicMask[i]));
 #endif
              MagicAttacks[index] = RMagicAttacks(i,u);
 		}	
@@ -781,21 +786,21 @@ start:
 					bbk = Bit(bk);
 					if (PAtt[White][wp] & bbk) {
 						if (turn == White) goto set_draw;
-						else if (F(SArea[wk] & bwp)) goto set_draw;
+						else if (!(SArea[wk] & bwp)) goto set_draw;
 					}
 					un = 0;
 					if (turn == Black) {
 						u = SArea[bk] & (~(SArea[wk] | PAtt[White][wp]));
-						if (F(u)) goto set_draw;
-						for (; T(u); Cut(u)) {
+						if (!(u)) goto set_draw;
+						for (; u != 0; Cut(u)) {
 							to = lsb(u);
 							if (Kpk_gen[turn ^ 1][wp][wk][to] == 1) goto set_draw;
 							else if (Kpk_gen[turn ^ 1][wp][wk][to] == 0) un++;
 						}
-						if (F(un)) goto set_win;
+						if (!(un)) goto set_win;
 					}
 					else {
-						for (u = SArea[wk] & (~(SArea[bk] | bwp)); T(u); Cut(u)) {
+						for (u = SArea[wk] & (~(SArea[bk] | bwp)); u != 0; Cut(u)) {
 							to = lsb(u);
 							if (Kpk_gen[turn ^ 1][wp][to][bk] == 2) goto set_win;
 							else if (Kpk_gen[turn ^ 1][wp][to][bk] == 0) un++;
@@ -803,7 +808,7 @@ start:
 						to = wp + 8;
 						if (to != wk && to != bk) {
 							if (to >= 56) {
-								if (F(SArea[to] & bbk)) goto set_win;
+								if (!(SArea[to] & bbk)) goto set_win;
 								if (SArea[to] & bwk) goto set_win;
 							}
 							else {
@@ -818,7 +823,7 @@ start:
 								}
 							}
 						}
-						if (F(un)) goto set_draw;
+						if (!(un)) goto set_draw;
 					}
 					continue;
 				set_draw:
@@ -852,10 +857,10 @@ void init_pst()
 	memset(Pst,0,16 * 64 * sizeof(int));
 
 	for (i = 0; i < 64; i++) {
-		r = Rank(i);
-		f = File(i);
-		d = Abs(f - r);
-		e = Abs(f + r - 7);
+		r = rank_of(i);
+		f = file_of(i);
+		d = std::abs(f - r);
+		e = std::abs(f + r - 7);
 		distQ[0] = DistC[f] * DistC[f]; distL[0] = DistC[f];
 		distQ[1] = DistC[r] * DistC[r]; distL[1] = DistC[r];
 		distQ[2] = RankR[d] * RankR[d] + RankR[e] * RankR[e]; distL[2] = RankR[d] + RankR[e];
@@ -920,7 +925,7 @@ void calc_material(int index) {
 	phase = Phase[PieceType[WhitePawn]] * (pawns[White] + pawns[Black]) + Phase[PieceType[WhiteKnight]] * (knights[White] + knights[Black])
 		+ Phase[PieceType[WhiteLight]] * (bishops[White] + bishops[Black]) + Phase[PieceType[WhiteRook]] * (rooks[White] + rooks[Black])
 		+ Phase[PieceType[WhiteQueen]] * (queens[White] + queens[Black]);
-	Material[index].phase = Min((Max(phase - PhaseMin, 0) * 128) / (PhaseMax - PhaseMin), 128);
+	Material[index].phase = std::min((std::max(phase - PhaseMin, 0) * 128) / (PhaseMax - PhaseMin), 128);
 
 	int special = 0;
 	for (me = 0; me < 2; me++) {
@@ -978,8 +983,8 @@ void calc_material(int index) {
 				else mat[me] = 8 * (2 + bishops[me]);
 			}
 			if (pawns[me] <= 1) {
-				mul[me] = Min(28, mul[me]);
-				if (rooks[me] == 1 && queens[me] + minor[me] == 0 && rooks[opp] == 1) mat[me] = Min(23, mat[me]);
+				mul[me] = std::min(28, mul[me]);
+				if (rooks[me] == 1 && queens[me] + minor[me] == 0 && rooks[opp] == 1) mat[me] = std::min(23, mat[me]);
 			}
 		}
 		if (!major[me]) {
@@ -989,8 +994,8 @@ void calc_material(int index) {
 				if (pawns[me] <= 1 && minor[opp] >= 1) mat[me] = 1;
 				if (bishops[me] == 1) {
 					if (minor[opp] == 1 && bishops[opp] == 1 && light[me] != light[opp]) {
-						mul[me] = Min(mul[me], 15);
-						if (pawns[me] - pawns[opp] <= 1) mul[me] = Min(mul[me], 11);
+						mul[me] = std::min(mul[me], 15);
+						if (pawns[me] - pawns[opp] <= 1) mul[me] = std::min(mul[me], 11);
 					}
 				}
 			} else if (!pawns[me] && knights[me] == 2 && !bishops[me]) {
@@ -999,14 +1004,14 @@ void calc_material(int index) {
 			}
 		}
 		if (!mul[me]) mat[me] = 0;
-		if (mat[me] <= 1 && tot[me] != tot[opp]) mul[me] = Min(mul[me], 8);
+		if (mat[me] <= 1 && tot[me] != tot[opp]) mul[me] = std::min(mul[me], 8);
 	}
 	if (bishops[White] == 1 && bishops[Black] == 1 && light[White] != light[Black]) {
-		mul[White] = Min(mul[White], 24 + 2 * (knights[Black] + major[Black]));
-		mul[Black] = Min(mul[Black], 24 + 2 * (knights[White] + major[White]));
+		mul[White] = std::min(mul[White], 24 + 2 * (knights[Black] + major[Black]));
+		mul[Black] = std::min(mul[Black], 24 + 2 * (knights[White] + major[White]));
 	} else if (!minor[White] && !minor[Black] && major[White] == 1 && major[Black] == 1 && rooks[White] == rooks[Black]) {
-		mul[White] = Min(mul[White], 25);
-		mul[Black] = Min(mul[Black], 25);
+		mul[White] = std::min(mul[White], 25);
+		mul[Black] = std::min(mul[Black], 25);
 	}
 	for (me = 0; me < 2; me++) {
 		Material[index].mul[me] = mul[me];
@@ -1086,7 +1091,7 @@ void setup_board()
 	Current->key = PieceKey[0][0];
 	if (Current->turn) Current->key ^= TurnKey;
 	Current->key ^= CastleKey[Current->castle_flags];
-	if (Current->ep_square) Current->key ^= EPKey[File(Current->ep_square)];
+	if (Current->ep_square) Current->key ^= EPKey[file_of(Current->ep_square)];
 	Current->pawn_key = 0;
 	Current->pawn_key ^= CastleKey[Current->castle_flags];
 	for (i = 0; i < 16; i++) BB(i) = 0;
@@ -1175,13 +1180,13 @@ int move_from_string(const char string[]) {
     from = ((string[1] - '1') * 8) + (string[0] - 'a');
     to  = ((string[3] - '1') * 8) + (string[2] - 'a');
     move = (from << 6) | to;
-    if (Board->square[from] >= WhiteKing && Abs(to - from) == 2) move |= FlagCastling;
-    if (T(Current->ep_square) && to == Current->ep_square) move |= FlagEP;
+    if (Board->square[from] >= WhiteKing && std::abs(to - from) == 2) move |= FlagCastling;
+    if (Current->ep_square && to == Current->ep_square) move |= FlagEP;
     if (string[4] != 0) {
         if (string[4] == 'q') move |= FlagPQueen;
         else if (string[4] == 'r') move |= FlagPRook;
         else if (string[4] == 'b') {
-			if (Odd(to ^ Rank(to))) move |= FlagPLight;
+			if (Odd(to ^ rank_of(to))) move |= FlagPLight;
 			else move |= FlagPDark;
 		} else if (string[4] == 'n') move |= FlagPKnight;
     }
@@ -1335,7 +1340,7 @@ void get_time_limit(char string[]) {
 			MoveTime = 1;
 			Infinite = 0;
 		} else if (!strcmp(ptr,"searchmoves")) {
-			if (F(SearchMoves)) {
+			if (!(SearchMoves)) {
 				for (i = 0; i < 256; i++) SMoves[i] = 0;
 			}
 		    SearchMoves = 1;
@@ -1364,18 +1369,18 @@ void get_time_limit(char string[]) {
 		time = btime;
 		inc = binc;
 	}
-	if (moves) moves = Max(moves - 1, 1);
-	int time_max = Max(time - Min(1000, time/2), 0);
+	if (moves) moves = std::max(moves - 1, 1);
+	int time_max = std::max(time - std::min(1000, time/2), 0);
 	int nmoves;
 	if (moves) nmoves = moves;
 	else {
 		nmoves = MovesTg - 1;
-		if (Current->ply > 40) nmoves += Min(Current->ply - 40, (100 - Current->ply)/2);
+		if (Current->ply > 40) nmoves += std::min(Current->ply - 40, (100 - Current->ply)/2);
 		exp_moves = nmoves;
 	}
-	TimeLimit1 = Min(time_max, (time_max + (Min(exp_moves, nmoves) * inc))/Min(exp_moves, nmoves));
-	TimeLimit2 = Min(time_max, (time_max + (Min(exp_moves, nmoves) * inc))/Min(3,Min(exp_moves, nmoves)));
-	TimeLimit1 = Min(time_max, (TimeLimit1 * TimeRatio)/100);
+	TimeLimit1 = std::min(time_max, (time_max + (std::min(exp_moves, nmoves) * inc))/std::min(exp_moves, nmoves));
+	TimeLimit2 = std::min(time_max, (time_max + (std::min(exp_moves, nmoves) * inc))/std::min(3, std::min(exp_moves, nmoves)));
+	TimeLimit1 = std::min(time_max, (TimeLimit1 * TimeRatio)/100);
 	if (Ponder) TimeLimit1 = (TimeLimit1 * PonderRatio)/100;
 	if (MoveTime) {
 		TimeLimit2 = movetime;
@@ -1384,7 +1389,7 @@ void get_time_limit(char string[]) {
     InfoTime = StartTime = get_time();
 	Searching = 1;
 ///	if (MaxPrN > 1) SET_BIT_64(Smpi->searching, 0);
-	if (F(Infinite)) PVN = 1;
+	if (!(Infinite)) PVN = 1;
 	if (Current->turn == White) root<0>(); else root<1>();
 }
 
@@ -1392,12 +1397,12 @@ int time_to_stop(GSearchInfo * SI, int time, int searching) {
 	if (Infinite) return 0;
 	if (time > TimeLimit2) return 1;
 	if (searching) return 0;
-	if (2 * time > TimeLimit2 && F(MoveTime)) return 1;
+	if (2 * time > TimeLimit2 && !(MoveTime)) return 1;
 	if (SI->Bad) return 0;
 	if (time > TimeLimit1) return 1;
-	if (T(SI->Change) || T(SI->FailLow)) return 0;
+	if (SI->Change || SI->FailLow) return 0;
 	if (time * 100 > TimeLimit1 * TimeNoChangeMargin) return 1;
-	if (F(SI->Early)) return 0;
+	if (!(SI->Early)) return 0;
 	if (time * 100 > TimeLimit1 * TimeNoPVSCOMargin) return 1;
 	if (SI->Singular < 1) return 0;
 	if (time * 100 > TimeLimit1 * TimeSingOneMargin) return 1;
@@ -1411,8 +1416,8 @@ void check_time(int searching) {
 	int Time;
 	if (Stop) goto jump;
 	CurrTime = get_time();
-	Time = Convert(CurrTime - StartTime,int);
-	if (T(Print) && Time > InfoLag && CurrTime - InfoTime > InfoDelay) {
+	Time = int(CurrTime - StartTime);
+	if (Print && Time > InfoLag && CurrTime - InfoTime > InfoDelay) {
 		InfoTime = CurrTime;
 		if (info_string[0]) {
 			fprintf(stdout,"%s",info_string);
@@ -1432,8 +1437,8 @@ void check_time(int time, int searching) {
 	int Time;
 	if (Stop) goto jump;
 	CurrTime = get_time();
-	Time = Convert(CurrTime - StartTime,int);
-	if (T(Print) && Time > InfoLag && CurrTime - InfoTime > InfoDelay) {
+	Time = int(CurrTime - StartTime);
+	if (Print && Time > InfoLag && CurrTime - InfoTime > InfoDelay) {
 		InfoTime = CurrTime;
 		if (info_string[0]) {
 			fprintf(stdout,"%s",info_string);
@@ -1554,7 +1559,7 @@ start:
 	}
 	M->flags |= FlagFinished;
 	if (value > Sp->alpha) {
-		Sp->alpha = Min(value, beta);
+		Sp->alpha = std::min(value, beta);
 		Sp->best_move = move;
 		if (value >= beta) {
 			Sp->finished = 1;

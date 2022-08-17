@@ -7,6 +7,7 @@ Copyright (c) 2018 Kazuyuki Kawabata
 This software is released under the MIT License, see "LICENSE.txt".
 */
 
+#define NOMINMAX
 #include <Windows.h>	// ToDo: 不要にする
 
 #include <string>
@@ -223,7 +224,7 @@ namespace {
 				ptr += 14;
 				value = atoi(ptr);
 				if (value != PrN) {
-					NewPrN = Max(1, Min(MaxPrN, value));
+					NewPrN = std::max(1, std::min(MaxPrN, value));
 					ResetHash = 0;
 					longjmp(ResetJump, 1);
 				}
@@ -256,7 +257,7 @@ namespace {
 		// (1) position startpos [moves <move1> <movei>]
 		// (2) position sfen <sfen string> [moves <move1> <movei>]
 		// ToDo:
-///		if (F(Searching)) get_position(mstring);
+///		if (!(Searching)) get_position(mstring);
 		iss >> token;
 		if (token == "startpos") {
 			sfen = StartSFEN;
@@ -340,7 +341,7 @@ namespace {
 				MoveTime = 1;
 				Infinite = 0;
 			} else if (token == "searchmoves") {
-				if (F(SearchMoves)) {
+				if (!(SearchMoves)) {
 					for (i = 0; i < 256; i++) SMoves[i] = 0;
 				}
 			    SearchMoves = 1;
@@ -359,18 +360,18 @@ namespace {
 			time = btime;
 			inc = binc;
 		}
-		if (moves) moves = Max(moves - 1, 1);
-		int time_max = Max(time - Min(1000, time/2), 0);
+		if (moves) moves = std::max(moves - 1, 1);
+		int time_max = std::max(time - std::min(1000, time/2), 0);
 		int nmoves;
 		if (moves) nmoves = moves;
 		else {
 			nmoves = MovesTg - 1;
-			if (pos.ply() > 40) nmoves += Min(pos.ply() - 40, (100 - pos.ply())/2);
+			if (pos.ply() > 40) nmoves += std::min(pos.ply() - 40, (100 - pos.ply())/2);
 			exp_moves = nmoves;
 		}
-		TimeLimit1 = Min(time_max, (time_max + (Min(exp_moves, nmoves) * inc))/Min(exp_moves, nmoves));
-		TimeLimit2 = Min(time_max, (time_max + (Min(exp_moves, nmoves) * inc))/Min(3,Min(exp_moves, nmoves)));
-		TimeLimit1 = Min(time_max, (TimeLimit1 * TimeRatio)/100);
+		TimeLimit1 = std::min(time_max, (time_max + (std::min(exp_moves, nmoves) * inc))/std::min(exp_moves, nmoves));
+		TimeLimit2 = std::min(time_max, (time_max + (std::min(exp_moves, nmoves) * inc))/std::min(3,std::min(exp_moves, nmoves)));
+		TimeLimit1 = std::min(time_max, (TimeLimit1 * TimeRatio)/100);
 		if (Ponder) TimeLimit1 = (TimeLimit1 * PonderRatio)/100;
 		if (MoveTime) {
 			TimeLimit2 = movetime;
@@ -379,7 +380,7 @@ namespace {
 	    InfoTime = StartTime = get_time();
 		Searching = 1;
 ///		if (MaxPrN > 1) SET_BIT_64(Smpi->searching, 0);
-		if (F(Infinite)) PVN = 1;
+		if (!(Infinite)) PVN = 1;
 		if (pos.cur_turn() == White) root<0>(); else root<1>();
 	}
 	void gameover(std::istringstream& iss)
@@ -436,7 +437,7 @@ void USI::loop(int argc, char** argv)
 			          << "option name BookFile type string default book_40.jsk\n"
 			          << "usiok" << sync_endl;
 #endif
-///			if (F(Searching)) init_search(root_pos, 1);
+///			if (!(Searching)) init_search(root_pos, 1);
 		} else if (cmd == "isready") {
 			// 時間がかかる初期化はここで行う.
 			// ToDo: 評価ベクトルの読み込み.
@@ -458,14 +459,14 @@ void USI::loop(int argc, char** argv)
 		} else if (cmd == "stop") {
 			// ToDo: 停止処理して、その時点の最善手を送る.
 			Stop = 1;
-			if (F(Searching)) send_best_move(root_pos);
+			if (!(Searching)) send_best_move(root_pos);
 		} else if (cmd == "ponderhit") {
 			// 先読み当たりで探索を継続する.
 			// ToDo: 探索終了していたらその時点の最善手を送る.
 			Infinite = 0;
 			if (!RootList[1]) Stop = 1;
-			if (F(CurrentSI->Bad) && F(CurrentSI->FailLow) && time_to_stop(BaseSI, LastTime, 0)) Stop = 1;
-			if (F(Searching)) send_best_move(root_pos);
+			if (!(CurrentSI->Bad) && !(CurrentSI->FailLow) && time_to_stop(BaseSI, LastTime, 0)) Stop = 1;
+			if (!(Searching)) send_best_move(root_pos);
 		} else if (cmd == "gameover") {
 			gameover(iss);
 		} else if (cmd == "quit") {

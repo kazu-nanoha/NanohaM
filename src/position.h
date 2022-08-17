@@ -91,7 +91,7 @@ public:
 	uint16_t& killer(int i) { return Current->killer[i]; }
 	uint16_t ref(int i) const { return Current->ref[i]; }
 	int& best() { return Current->best; }
-	int sel_depth() const { int d; for (d=1; d<127 && T(Data[d].att[0]); d++); return d-1; }
+	int sel_depth() const { int d; for (d=1; d<127 && Data[d].att[0] != 0; d++); return d-1; }
 	int height() const { return (int)(Current - Data); }
 	bool is_repeat() const;
 
@@ -131,11 +131,11 @@ inline bool Position::is_repeat() const
 }
 
 
-#define Check(me) T(pos.att((me) ^ 1) & King(me))
-#define IsIllegal(me,move) ((T(pos.xray(opp) & Bit(From(move))) && F(Bit(To(move)) & FullLine[lsb(King(me))][From(move)])) \
-	|| (IsEP(move) && T(Line[Rank(From(move))] & King(me)) && T(Line[Rank(From(move))] & Major(opp)) && \
-	T(RookAttacks(lsb(King(me)),PieceAll ^ Bit(From(move)) ^ Bit(pos.ep_square() - Push(me))) & Major(opp))))
-#define IsRepetition(margin,move) ((margin) > 0 && Current->ply >= 2 && (Current-1)->move == ((To(move) << 6) | From(move)) && F(Square(To(move))) && F((move) & 0xF000))
+#define Check(me) ((pos.att((me) ^ 1) & King(me)) != 0)
+#define IsIllegal(me,move) (((pos.xray(opp) & Bit(From(move))) != 0 && !(Bit(To(move)) & FullLine[lsb(King(me))][From(move)])) \
+	|| (IsEP(move) && (Line[rank_of(From(move))] & King(me)) != 0 && (Line[rank_of(From(move))] & Major(opp)) != 0 && \
+	(RookAttacks(lsb(King(me)),PieceAll ^ Bit(From(move)) ^ Bit(pos.ep_square() - Push(me))) & Major(opp)) != 0))
+#define IsRepetition(margin,move) ((margin) > 0 && Current->ply >= 2 && (Current-1)->move == ((To(move) << 6) | From(move)) && !(Square(To(move))) && !((move) & 0xF000))
 
 #if 0
 template <bool me> void do_move(int move);

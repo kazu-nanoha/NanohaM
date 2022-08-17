@@ -36,8 +36,8 @@ This software is released under the MIT License, see "LICENSE.txt".
 #define AddHistory(from,to) AddMove(from,to,0,History(from,to))
 ///#define AddDeltaP(piece,from,to,flags) AddMove(from,to,flags,Convert(DeltaScore(piece,from,to)+(int16_t)0x4000,int) << 16)
 ///#define AddDelta(from,to) AddMove(from,to,0,Convert(Delta(from,to)+(int16_t)0x4000,int) << 16)
-#define AddCDeltaP(piece,from,to,flags) {if (DeltaScore(piece,from,to) >= margin) AddMove(from,to,flags,Convert(DeltaScore(piece,from,to)+(int16_t)0x4000,int) << 16)}
-#define AddCDelta(from,to) {if (Delta(from,to) >= margin) AddMove(from,to,0,Convert(Delta(from,to)+(int16_t)0x4000,int) << 16)}
+#define AddCDeltaP(piece,from,to,flags) {if (DeltaScore(piece,from,to) >= margin) AddMove(from,to,flags, int(DeltaScore(piece,from,to)+(int16_t)0x4000) << 16)}
+#define AddCDelta(from,to) {if (Delta(from,to) >= margin) AddMove(from,to,0, int(Delta(from,to)+(int16_t)0x4000) << 16)}
 
 
 #define MvvLvaPromotion (MvvLva[WhiteQueen][BlackQueen])
@@ -50,8 +50,6 @@ This software is released under the MIT License, see "LICENSE.txt".
 #define RefTwoScore ((0xFF << 16) | (2 << 24))
 #define KillerOneScore ((0xFF << 16) | (1 << 24))
 #define KillerTwoScore (0xFF << 16)
-
-
 
 #define FlagSort (1 << 0)
 #define FlagNoBcSort (1 << 1)
@@ -86,9 +84,9 @@ MoveList::~MoveList()
 int MoveList::pick_move() {
 	int move, *p, *best;
 	move = *cur;
-	if (F(move)) return 0;
+	if (!(move)) return 0;
 	best = cur;
-	for (p = cur + 1; T(*p); p++) {
+	for (p = cur + 1; *p != 0; p++) {
 		if ((*p) > move) {
 			best = p;
 			move = *p;
@@ -167,7 +165,6 @@ template <bool me> void MoveList::gen_next_moves(Position& pos) {
 	}
 }
 
-
 template <bool me, bool root> int MoveList::get_move(Position& pos) {
 	int move;
 
@@ -177,7 +174,7 @@ template <bool me, bool root> int MoveList::get_move(Position& pos) {
 		return move;
 	}
 start:
-	if (F(*cur)) {
+	if (!(*cur)) {
 		stage++;
 		if ((1 << stage) & StageNone) return 0;
 		gen_next_moves<me>(pos);
@@ -202,13 +199,13 @@ template <bool me> void MoveList::gen_root_moves(Position& pos) {
 
 	killer = 0;
 	if (Entry = TT.probe(pos.key())) {
-		if (T(Entry->move16) && Entry->low_depth > depth) {
+		if (Entry->move16 != 0 && Entry->low_depth > depth) {
 			depth = Entry->low_depth;
 			killer = Entry->move16;
 		}
 	}
 	if (PVEntry = PVHASH.probe(pos.key())) {
-		if (PVEntry->depth > depth && T(PVEntry->move16)) {
+		if (PVEntry->depth > depth && PVEntry->move16 != 0) {
 			depth = PVEntry->depth;
 			killer = PVEntry->move16;
 		}
@@ -246,32 +243,32 @@ template <bool me> int * MoveList::gen_captures(Position& pos) {
 	int* list = moves;
 
 	if (pos.ep_square())
-		for (v = PAtt[opp][pos.ep_square()] & Pawn(me); T(v); Cut(v)) AddMove(lsb(v),pos.ep_square(),FlagEP,MvvLva[IPawn(me)][IPawn(opp)])
-	for (u = Pawn(me) & Line(me,6); T(u); Cut(u))
-    	if (F(Square(lsb(u) + Push(me)))) {
+		for (v = PAtt[opp][pos.ep_square()] & Pawn(me); v != 0; Cut(v)) AddMove(lsb(v),pos.ep_square(),FlagEP,MvvLva[IPawn(me)][IPawn(opp)])
+	for (u = Pawn(me) & Line(me,6); u != 0; Cut(u))
+    	if (!(Square(lsb(u) + Push(me)))) {
 			AddMove(lsb(u),lsb(u) + Push(me),FlagPQueen,MvvLvaPromotion)
 			if (NAtt[lsb(King(opp))] & Bit(lsb(u) + Push(me))) AddMove(lsb(u),lsb(u) + Push(me),FlagPKnight,MvvLvaPromotionKnight)
 		}
-	for (v = ShiftW(opp,pos.mask()) & Pawn(me) & Line(me,6); T(v); Cut(v)) {
+	for (v = ShiftW(opp,pos.mask()) & Pawn(me) & Line(me,6); v != 0; Cut(v)) {
 		AddMove(lsb(v),lsb(v)+PushE(me),FlagPQueen,MvvLvaPromotionCap(Square(lsb(v)+PushE(me))))
 		if (NAtt[lsb(King(opp))] & Bit(lsb(v) + PushE(me))) AddMove(lsb(v),lsb(v)+PushE(me),FlagPKnight,MvvLvaPromotionKnightCap(Square(lsb(v)+PushE(me))))
 	}
-	for (v = ShiftE(opp,pos.mask()) & Pawn(me) & Line(me,6); T(v); Cut(v)) {
+	for (v = ShiftE(opp,pos.mask()) & Pawn(me) & Line(me,6); v != 0; Cut(v)) {
 		AddMove(lsb(v),lsb(v)+PushW(me),FlagPQueen,MvvLvaPromotionCap(Square(lsb(v)+PushW(me))))
 		if (NAtt[lsb(King(opp))] & Bit(lsb(v) + PushW(me))) AddMove(lsb(v),lsb(v)+PushW(me),FlagPKnight,MvvLvaPromotionKnightCap(Square(lsb(v)+PushE(me))))
 	}
-	if (F(pos.att(me) & pos.mask())) goto finish;
-	for (v = ShiftW(opp,pos.mask()) & Pawn(me) & (~Line(me,6)); T(v); Cut(v)) AddCaptureP(IPawn(me),lsb(v),lsb(v)+PushE(me),0)
-	for (v = ShiftE(opp,pos.mask()) & Pawn(me) & (~Line(me,6)); T(v); Cut(v)) AddCaptureP(IPawn(me),lsb(v),lsb(v)+PushW(me),0)
-	for (v = SArea[lsb(King(me))] & pos.mask() & (~pos.att(opp)); T(v); Cut(v)) AddCaptureP(IKing(me),lsb(King(me)),lsb(v),0)
-	for (u = Knight(me); T(u); Cut(u))
-		for (v = NAtt[lsb(u)] & pos.mask(); T(v); Cut(v)) AddCaptureP(IKnight(me),lsb(u),lsb(v),0)
-	for (u = Bishop(me); T(u); Cut(u))
-		for (v = BishopAttacks(lsb(u),PieceAll) & pos.mask(); T(v); Cut(v)) AddCapture(lsb(u),lsb(v),0)
-	for (u = Rook(me); T(u); Cut(u))
-		for (v = RookAttacks(lsb(u),PieceAll) & pos.mask(); T(v); Cut(v)) AddCaptureP(IRook(me),lsb(u),lsb(v),0)
-	for (u = Queen(me); T(u); Cut(u))
-		for (v = QueenAttacks(lsb(u),PieceAll) & pos.mask(); T(v); Cut(v)) AddCaptureP(IQueen(me),lsb(u),lsb(v),0)
+	if (!(pos.att(me) & pos.mask())) goto finish;
+	for (v = ShiftW(opp,pos.mask()) & Pawn(me) & (~Line(me,6)); v != 0; Cut(v)) AddCaptureP(IPawn(me),lsb(v),lsb(v)+PushE(me),0)
+	for (v = ShiftE(opp,pos.mask()) & Pawn(me) & (~Line(me,6)); v != 0; Cut(v)) AddCaptureP(IPawn(me),lsb(v),lsb(v)+PushW(me),0)
+	for (v = SArea[lsb(King(me))] & pos.mask() & (~pos.att(opp)); v != 0; Cut(v)) AddCaptureP(IKing(me),lsb(King(me)),lsb(v),0)
+	for (u = Knight(me); u != 0; Cut(u))
+		for (v = NAtt[lsb(u)] & pos.mask(); v != 0; Cut(v)) AddCaptureP(IKnight(me),lsb(u),lsb(v),0)
+	for (u = Bishop(me); u != 0; Cut(u))
+		for (v = BishopAttacks(lsb(u),PieceAll) & pos.mask(); v != 0; Cut(v)) AddCapture(lsb(u),lsb(v),0)
+	for (u = Rook(me); u != 0; Cut(u))
+		for (v = RookAttacks(lsb(u),PieceAll) & pos.mask(); v != 0; Cut(v)) AddCaptureP(IRook(me),lsb(u),lsb(v),0)
+	for (u = Queen(me); u != 0; Cut(u))
+		for (v = QueenAttacks(lsb(u),PieceAll) & pos.mask(); v != 0; Cut(v)) AddCaptureP(IQueen(me),lsb(u),lsb(v),0)
 finish:
 	*list = 0;
 	return list;
@@ -285,9 +282,9 @@ template <bool me> int * MoveList::gen_evasions(Position& pos) {
 
 	king = lsb(King(me));
 	att = (NAtt[king] & Knight(opp)) | (PAtt[me][king] & Pawn(opp));
-	for (u = (BMask[king] & BSlider(opp)) | (RMask[king] & RSlider(opp)); T(u); u ^= b) {
+	for (u = (BMask[king] & BSlider(opp)) | (RMask[king] & RSlider(opp)); u != 0; u ^= b) {
 		b = Bit(lsb(u));
-		if (F(Between[king][lsb(u)] & PieceAll)) att |= b;
+		if (!(Between[king][lsb(u)] & PieceAll)) att |= b;
 	}
 	att_sq = lsb(att);
 	esc = SArea[king] & (~(Piece(me) | pos.att(opp))) & pos.mask();
@@ -296,48 +293,48 @@ template <bool me> int * MoveList::gen_evasions(Position& pos) {
 	if (att) {
 		att_sq = lsb(att);
 		if (Square(att_sq) >= WhiteLight) esc &= ~FullLine[king][att_sq];
-		for (; T(esc); Cut(esc)) AddCaptureP(IKing(me),king,lsb(esc),0)
+		for (; esc != 0; Cut(esc)) AddCaptureP(IKing(me),king,lsb(esc),0)
 		*list = 0;
 		return list;
 	}
 	if (Bit(att_sq) & pos.mask()) {
-	    if (T(pos.ep_square()) && pos.ep_square() == att_sq + Push(me))
-		    for (u = PAtt[opp][att_sq + Push(me)] & Pawn(me); T(u); Cut(u)) AddMove(lsb(u),att_sq + Push(me),FlagEP,MvvLva[IPawn(me)][IPawn(opp)])
+	    if ((pos.ep_square()) != 0 && pos.ep_square() == att_sq + Push(me))
+		    for (u = PAtt[opp][att_sq + Push(me)] & Pawn(me); u != 0; Cut(u)) AddMove(lsb(u),att_sq + Push(me),FlagEP,MvvLva[IPawn(me)][IPawn(opp)])
 	}
-	for (u = PAtt[opp][att_sq] & Pawn(me); T(u); Cut(u)) {
+	for (u = PAtt[opp][att_sq] & Pawn(me); u != 0; Cut(u)) {
         from = lsb(u);
 		if (Bit(att_sq) & Line(me,7)) AddMove(from,att_sq,FlagPQueen,MvvLvaPromotionCap(Square(att_sq)))
 		else if (Bit(att_sq) & pos.mask()) AddCaptureP(IPawn(me),from,att_sq,0)
 	}
-	for ( ; T(esc); Cut(esc)) AddCaptureP(IKing(me),king,lsb(esc),0)
+	for ( ; esc != 0; Cut(esc)) AddCaptureP(IKing(me),king,lsb(esc),0)
 	att = Between[king][att_sq];
-	for (u = Shift(opp,att) & Pawn(me); T(u); Cut(u)) {
+	for (u = Shift(opp,att) & Pawn(me); u != 0; Cut(u)) {
         from = lsb(u);
 		if (Bit(from) & Line(me,6)) AddMove(from,from + Push(me),FlagPQueen,MvvLvaPromotion)
-		else if (F(~pos.mask())) AddMove(from,from + Push(me),0,0)
+		else if (!(~pos.mask())) AddMove(from,from + Push(me),0,0)
 	}
-	if (F(~pos.mask())) {
-	    for (u = Shift(opp,Shift(opp,att)) & Line(me, 1) & Pawn(me); T(u); Cut(u))
-            if (F(Square(lsb(u)+Push(me)))) AddMove(lsb(u),lsb(u) + 2 * Push(me),0,0)
+	if (!(~pos.mask())) {
+	    for (u = Shift(opp,Shift(opp,att)) & Line(me, 1) & Pawn(me); u != 0; Cut(u))
+            if (!(Square(lsb(u)+Push(me)))) AddMove(lsb(u),lsb(u) + 2 * Push(me),0,0)
     }
 	att |= Bit(att_sq);
-	for (u = Knight(me); T(u); Cut(u))
-        for (esc = NAtt[lsb(u)] & att; T(esc); esc ^= b) {
+	for (u = Knight(me); u != 0; Cut(u))
+        for (esc = NAtt[lsb(u)] & att; esc != 0; esc ^= b) {
 			b = Bit(lsb(esc));
 			if (b & pos.mask()) AddCaptureP(IKnight(me),lsb(u),lsb(esc),0)
 		}
-	for (u = Bishop(me); T(u); Cut(u))
-        for (esc = BishopAttacks(lsb(u),PieceAll) & att; T(esc); esc ^= b) {
+	for (u = Bishop(me); u != 0; Cut(u))
+        for (esc = BishopAttacks(lsb(u),PieceAll) & att; esc != 0; esc ^= b) {
 			b = Bit(lsb(esc));
 			if (b & pos.mask()) AddCapture(lsb(u),lsb(esc),0)
 		}
-	for (u = Rook(me); T(u); Cut(u))
-        for (esc = RookAttacks(lsb(u),PieceAll) & att; T(esc); esc ^= b) {
+	for (u = Rook(me); u != 0; Cut(u))
+        for (esc = RookAttacks(lsb(u),PieceAll) & att; esc != 0; esc ^= b) {
 			b = Bit(lsb(esc));
 			if (b & pos.mask()) AddCaptureP(IRook(me),lsb(u),lsb(esc),0)
 		}
-	for (u = Queen(me); T(u); Cut(u))
-        for (esc = QueenAttacks(lsb(u),PieceAll) & att; T(esc); esc ^= b) {
+	for (u = Queen(me); u != 0; Cut(u))
+        for (esc = QueenAttacks(lsb(u),PieceAll) & att; esc != 0; esc ^= b) {
 			b = Bit(lsb(esc));
 			if (b & pos.mask()) AddCaptureP(IQueen(me),lsb(u),lsb(esc),0)
 		}
@@ -348,9 +345,9 @@ template <bool me> int * MoveList::gen_evasions(Position& pos) {
 void MoveList::mark_evasions(Position& pos)
 {
 	int* list = moves;
-	for (; T(*list); list++) {
+	for (; *list != 0; list++) {
 		int move = (*list) & 0xFFFF;
-	    if (F(Square(To(move))) && F(move & 0xE000)) {
+	    if (!(Square(To(move))) && !(move & 0xE000)) {
 			if (move == ref[0]) *list |= RefOneScore;
 			else if (move == ref[1]) *list |= RefTwoScore;
 			else if (move == killers[1]) *list |= KillerOneScore;
@@ -368,26 +365,26 @@ template <bool me> int * MoveList::gen_quiet_moves(Position& pos, int * list) {
     occ = PieceAll;
 	free = ~occ;
 	if (me == White) {
-		if (T(pos.castle_flags() & CanCastle_OO) && F(occ & 0x60) && F(pos.att(Black) & 0x70)) AddHistoryP(IKing(White),4,6,FlagCastling)
-	    if (T(pos.castle_flags() & CanCastle_OOO) && F(occ & 0xE) && F(pos.att(Black) & 0x1C)) AddHistoryP(IKing(White),4,2,FlagCastling)
+		if ((pos.castle_flags() & CanCastle_OO) != 0 && !(occ & 0x60) && !(pos.att(Black) & 0x70)) AddHistoryP(IKing(White),4,6,FlagCastling)
+	    if ((pos.castle_flags() & CanCastle_OOO) != 0 && !(occ & 0xE) && !(pos.att(Black) & 0x1C)) AddHistoryP(IKing(White),4,2,FlagCastling)
 	} else {
-		if (T(pos.castle_flags() & CanCastle_oo) && F(occ & 0x6000000000000000) && F(pos.att(White) & 0x7000000000000000)) AddHistoryP(IKing(Black),60,62,FlagCastling)
-	    if (T(pos.castle_flags() & CanCastle_ooo) && F(occ & 0x0E00000000000000) && F(pos.att(White) & 0x1C00000000000000)) AddHistoryP(IKing(Black),60,58,FlagCastling)
+		if ((pos.castle_flags() & CanCastle_oo) != 0 && !(occ & 0x6000000000000000) && !(pos.att(White) & 0x7000000000000000)) AddHistoryP(IKing(Black),60,62,FlagCastling)
+	    if ((pos.castle_flags() & CanCastle_ooo) != 0 && !(occ & 0x0E00000000000000) && !(pos.att(White) & 0x1C00000000000000)) AddHistoryP(IKing(Black),60,58,FlagCastling)
 	}
-	for (v = Shift(me,Pawn(me)) & free & (~Line(me,7)); T(v); Cut(v)) {
+	for (v = Shift(me,Pawn(me)) & free & (~Line(me,7)); v != 0; Cut(v)) {
         to = lsb(v);
-	    if (T(Bit(to) & Line(me,2)) && F(Square(to + Push(me)))) AddHistoryP(IPawn(me),to - Push(me),to + Push(me),0)
+	    if ((Bit(to) & Line(me,2)) != 0 && !(Square(to + Push(me)))) AddHistoryP(IPawn(me),to - Push(me),to + Push(me),0)
 		AddHistoryP(IPawn(me),to - Push(me),to,0)
 	}
-	for (u = Knight(me); T(u); Cut(u))
-		for (v = free & NAtt[lsb(u)]; T(v); Cut(v)) AddHistoryP(IKnight(me),lsb(u),lsb(v),0)
-	for (u = Bishop(me); T(u); Cut(u))
-		for (v = free & BishopAttacks(lsb(u),occ); T(v); Cut(v)) AddHistory(lsb(u),lsb(v))
-	for (u = Rook(me); T(u); Cut(u))
-		for (v = free & RookAttacks(lsb(u),occ); T(v); Cut(v)) AddHistoryP(IRook(me),lsb(u),lsb(v),0)
-	for (u = Queen(me); T(u); Cut(u))
-		for (v = free & QueenAttacks(lsb(u),occ); T(v); Cut(v)) AddHistoryP(IQueen(me),lsb(u),lsb(v),0)
-	for (v = SArea[lsb(King(me))] & free & (~pos.att(opp)); T(v); Cut(v)) AddHistoryP(IKing(me),lsb(King(me)),lsb(v),0)
+	for (u = Knight(me); u != 0; Cut(u))
+		for (v = free & NAtt[lsb(u)]; v != 0; Cut(v)) AddHistoryP(IKnight(me),lsb(u),lsb(v),0)
+	for (u = Bishop(me); u != 0; Cut(u))
+		for (v = free & BishopAttacks(lsb(u),occ); v != 0; Cut(v)) AddHistory(lsb(u),lsb(v))
+	for (u = Rook(me); u != 0; Cut(u))
+		for (v = free & RookAttacks(lsb(u),occ); v != 0; Cut(v)) AddHistoryP(IRook(me),lsb(u),lsb(v),0)
+	for (u = Queen(me); u != 0; Cut(u))
+		for (v = free & QueenAttacks(lsb(u),occ); v != 0; Cut(v)) AddHistoryP(IQueen(me),lsb(u),lsb(v),0)
+	for (v = SArea[lsb(King(me))] & free & (~pos.att(opp)); v != 0; Cut(v)) AddHistoryP(IKing(me),lsb(King(me)),lsb(v),0)
 	*list = 0;
 	return list;
 }
@@ -400,13 +397,13 @@ template <bool me> int * MoveList::gen_checks(Position& pos) {
 
 	clear = ~(Piece(me) | pos.mask());
     king = lsb(King(opp));
-	for (u = pos.xray(me) & Piece(me); T(u); Cut(u)) {
+	for (u = pos.xray(me) & Piece(me); u != 0; Cut(u)) {
 		from = lsb(u);
 		target = clear & (~FullLine[king][from]);
 		if (Square(from) == IPawn(me)) {
-			if (F(Bit(from + Push(me)) & Line(me,7))) {
-			    if (T(Bit(from + Push(me)) & target) && F(Square(from + Push(me)))) AddMove(from,from + Push(me),0,MvvLvaXray)
-				for (v = PAtt[me][from] & target & Piece(opp); T(v); Cut(v)) AddMove(from,lsb(v),0,MvvLvaXrayCap(Square(lsb(v))))
+			if (!(Bit(from + Push(me)) & Line(me,7))) {
+			    if ((Bit(from + Push(me)) & target) != 0 && !(Square(from + Push(me)))) AddMove(from,from + Push(me),0,MvvLvaXray)
+				for (v = PAtt[me][from] & target & Piece(opp); v != 0; Cut(v)) AddMove(from,lsb(v),0,MvvLvaXrayCap(Square(lsb(v))))
 			}
 		} else {
 			if (Square(from) < WhiteLight) v = NAtt[from] & target;
@@ -414,25 +411,25 @@ template <bool me> int * MoveList::gen_checks(Position& pos) {
 			else if (Square(from) < WhiteQueen) v = RookAttacks(from,PieceAll) & target;
 			else if (Square(from) < WhiteKing) v = QueenAttacks(from,PieceAll) & target;
 			else v = SArea[from] & target & (~pos.att(opp));
-			for ( ; T(v); Cut(v)) AddMove(from,lsb(v),0,MvvLvaXrayCap(Square(lsb(v))))
+			for ( ; v != 0; Cut(v)) AddMove(from,lsb(v),0,MvvLvaXrayCap(Square(lsb(v))))
 		}
 	}
 	xray = ~(pos.xray(me) & BB(me));
-	for (u = Knight(me) & NArea[king] & xray; T(u); Cut(u))
-		for (v = NAtt[king] & NAtt[lsb(u)] & clear; T(v); Cut(v)) AddCaptureP(IKnight(me),lsb(u),lsb(v),0)
-    for (u = DArea[king] & Pawn(me) & (~Line(me,6)) & xray; T(u); Cut(u)) {
+	for (u = Knight(me) & NArea[king] & xray; u != 0; Cut(u))
+		for (v = NAtt[king] & NAtt[lsb(u)] & clear; v != 0; Cut(v)) AddCaptureP(IKnight(me),lsb(u),lsb(v),0)
+    for (u = DArea[king] & Pawn(me) & (~Line(me,6)) & xray; u != 0; Cut(u)) {
 		from = lsb(u);
-		for (v = PAtt[me][from] & PAtt[opp][king] & clear & Piece(opp); T(v); Cut(v)) AddCaptureP(IPawn(me),from,lsb(v),0)
-		if (F(Square(from + Push(me))) && T(Bit(from + Push(me)) & PAtt[opp][king])) AddMove(from,from + Push(me),0,0)
+		for (v = PAtt[me][from] & PAtt[opp][king] & clear & Piece(opp); v != 0; Cut(v)) AddCaptureP(IPawn(me),from,lsb(v),0)
+		if (!(Square(from + Push(me))) && (Bit(from + Push(me)) & PAtt[opp][king]) != 0) AddMove(from,from + Push(me),0,0)
 	}
 	b_target = BishopAttacks(king,PieceAll) & clear;
 	r_target = RookAttacks(king,PieceAll) & clear;
-	for (u = (Odd(king ^ Rank(king)) ? BB(WhiteLight | me) : BB(WhiteDark | me)) & xray; T(u); Cut(u))
-		for (v = BishopAttacks(lsb(u),PieceAll) & b_target; T(v); Cut(v)) AddCapture(lsb(u),lsb(v),0)
-	for (u = Rook(me) & xray; T(u); Cut(u)) 
-		for (v = RookAttacks(lsb(u),PieceAll) & r_target; T(v); Cut(v)) AddCaptureP(IRook(me),lsb(u),lsb(v),0)
-	for (u = Queen(me) & xray; T(u); Cut(u)) 
-		for (v = QueenAttacks(lsb(u),PieceAll) & (b_target | r_target); T(v); Cut(v)) AddCaptureP(IQueen(me),lsb(u),lsb(v),0)
+	for (u = (Odd(king ^ rank_of(king)) ? BB(WhiteLight | me) : BB(WhiteDark | me)) & xray; u != 0; Cut(u))
+		for (v = BishopAttacks(lsb(u),PieceAll) & b_target; v != 0; Cut(v)) AddCapture(lsb(u),lsb(v),0)
+	for (u = Rook(me) & xray; u != 0; Cut(u)) 
+		for (v = RookAttacks(lsb(u),PieceAll) & r_target; v != 0; Cut(v)) AddCaptureP(IRook(me),lsb(u),lsb(v),0)
+	for (u = Queen(me) & xray; u != 0; Cut(u)) 
+		for (v = QueenAttacks(lsb(u),PieceAll) & (b_target | r_target); v != 0; Cut(v)) AddCaptureP(IQueen(me),lsb(u),lsb(v),0)
 	*list = 0;
 	return list;
 }
@@ -448,26 +445,26 @@ template <bool me> int * MoveList::gen_delta_moves(Position& pos)
     occ = PieceAll;
 	free = ~occ;
 	if (me == White) {
-		if (T(pos.castle_flags() & CanCastle_OO) && F(occ & 0x60) && F(pos.att(Black) & 0x70)) AddCDeltaP(IKing(White),4,6,FlagCastling)
-	    if (T(pos.castle_flags() & CanCastle_OOO) && F(occ & 0xE) && F(pos.att(Black) & 0x1C)) AddCDeltaP(IKing(White),4,2,FlagCastling)
+		if ((pos.castle_flags() & CanCastle_OO) != 0 && !(occ & 0x60) && !(pos.att(Black) & 0x70)) AddCDeltaP(IKing(White),4,6,FlagCastling)
+	    if ((pos.castle_flags() & CanCastle_OOO) != 0 && !(occ & 0xE) && !(pos.att(Black) & 0x1C)) AddCDeltaP(IKing(White),4,2,FlagCastling)
 	} else {
-		if (T(pos.castle_flags() & CanCastle_oo) && F(occ & 0x6000000000000000) && F(pos.att(White) & 0x7000000000000000)) AddCDeltaP(IKing(Black),60,62,FlagCastling)
-	    if (T(pos.castle_flags() & CanCastle_ooo) && F(occ & 0x0E00000000000000) && F(pos.att(White) & 0x1C00000000000000)) AddCDeltaP(IKing(Black),60,58,FlagCastling)
+		if ((pos.castle_flags() & CanCastle_oo) != 0 && !(occ & 0x6000000000000000) && !(pos.att(White) & 0x7000000000000000)) AddCDeltaP(IKing(Black),60,62,FlagCastling)
+	    if ((pos.castle_flags() & CanCastle_ooo) != 0 && !(occ & 0x0E00000000000000) && !(pos.att(White) & 0x1C00000000000000)) AddCDeltaP(IKing(Black),60,58,FlagCastling)
 	}
-	for (v = Shift(me,Pawn(me)) & free & (~Line(me,7)); T(v); Cut(v)) {
+	for (v = Shift(me,Pawn(me)) & free & (~Line(me,7)); v != 0; Cut(v)) {
         to = lsb(v);
-	    if (T(Bit(to) & Line(me,2)) && F(Square(to + Push(me)))) AddCDeltaP(IPawn(me),to - Push(me),to + Push(me),0)
+	    if ((Bit(to) & Line(me,2)) != 0 && !(Square(to + Push(me)))) AddCDeltaP(IPawn(me),to - Push(me),to + Push(me),0)
 		AddCDeltaP(IPawn(me),to - Push(me),to,0)
 	}
-	for (u = Knight(me); T(u); Cut(u))
-		for (v = free & NAtt[lsb(u)]; T(v); Cut(v)) AddCDeltaP(IKnight(me),lsb(u),lsb(v),0)
-	for (u = Bishop(me); T(u); Cut(u))
-		for (v = free & BishopAttacks(lsb(u),occ); T(v); Cut(v)) AddCDelta(lsb(u),lsb(v))
-	for (u = Rook(me); T(u); Cut(u))
-		for (v = free & RookAttacks(lsb(u),occ); T(v); Cut(v)) AddCDeltaP(IRook(me),lsb(u),lsb(v),0)
-	for (u = Queen(me); T(u); Cut(u))
-		for (v = free & QueenAttacks(lsb(u),occ); T(v); Cut(v)) AddCDeltaP(IQueen(me),lsb(u),lsb(v),0)
-	for (v = SArea[lsb(King(me))] & free & (~pos.att(opp)); T(v); Cut(v)) AddCDeltaP(IKing(me),lsb(King(me)),lsb(v),0)
+	for (u = Knight(me); u != 0; Cut(u))
+		for (v = free & NAtt[lsb(u)]; v != 0; Cut(v)) AddCDeltaP(IKnight(me),lsb(u),lsb(v),0)
+	for (u = Bishop(me); u != 0; Cut(u))
+		for (v = free & BishopAttacks(lsb(u),occ); v != 0; Cut(v)) AddCDelta(lsb(u),lsb(v))
+	for (u = Rook(me); u != 0; Cut(u))
+		for (v = free & RookAttacks(lsb(u),occ); v != 0; Cut(v)) AddCDeltaP(IRook(me),lsb(u),lsb(v),0)
+	for (u = Queen(me); u != 0; Cut(u))
+		for (v = free & QueenAttacks(lsb(u),occ); v != 0; Cut(v)) AddCDeltaP(IQueen(me),lsb(u),lsb(v),0)
+	for (v = SArea[lsb(King(me))] & free & (~pos.att(opp)); v != 0; Cut(v)) AddCDeltaP(IKing(me),lsb(King(me)),lsb(v),0)
 	*list = 0;
 	return list;
 }
@@ -498,4 +495,3 @@ template void MoveList::gen_root_moves<true>(Position& pos);
 
 template int * MoveList::gen_delta_moves<0>(Position& pos);
 template int * MoveList::gen_delta_moves<1>(Position& pos);
-

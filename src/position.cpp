@@ -72,7 +72,7 @@ template <bool me> void Position::do_move(int move)
 	Next = Current + 1;
 	Next->ep_square = 0;
 	capture = Square(to);
-    if (F(capture)) {
+    if (!(capture)) {
 		Next->capture = 0;
 		goto non_capture;
     }
@@ -97,7 +97,7 @@ template <bool me> void Position::do_move(int move)
 	if (capture != IPawn(opp)) Next->pawn_key = Current->pawn_key ^ CastleKey[Current->castle_flags] ^ CastleKey[Next->castle_flags]; // of course we can put a lot of operations inside this "if {}" but the speedup won't be worth the effort
 	else Next->pawn_key = Current->pawn_key ^ PieceKey[IPawn(opp)][to] ^ CastleKey[Current->castle_flags] ^ CastleKey[Next->castle_flags];
 	Next->material = Current->material - MatCode[capture];
-	if (T(Current->material & FlagUnusualMaterial) && capture >= WhiteKnight) {
+	if ((Current->material & FlagUnusualMaterial) != 0 && capture >= WhiteKnight) {
 		if (popcnt(BB(WhiteQueen)) <= 2 && popcnt(BB(BlackQueen)) <= 2) {
 			if (popcnt(BB(WhiteLight)) <= 1 && popcnt(BB(BlackLight)) <= 1 && popcnt(BB(WhiteKnight)) <= 2
 				&& popcnt(BB(BlackKnight)) <= 2 && popcnt(BB(WhiteRook)) <= 2 && popcnt(BB(BlackRook)) <= 2)
@@ -111,7 +111,7 @@ template <bool me> void Position::do_move(int move)
 			Square(to) = piece;
 		    Next->material += MatCode[piece] - MatCode[IPawn(me)];
 			if (piece < WhiteRook) {
-				if (piece >= WhiteLight && T(BB(piece))) Next->material |= FlagUnusualMaterial;
+				if (piece >= WhiteLight && BB(piece) != 0) Next->material |= FlagUnusualMaterial;
 				if (Multiple(BB(piece))) Next->material |= FlagUnusualMaterial;
 			} else if (Multiple(BB(piece))) Next->material |= FlagUnusualMaterial;
 			Pawn(me) ^= mask_to;
@@ -130,8 +130,8 @@ template <bool me> void Position::do_move(int move)
 		PawnEntry = PAWNHASH.entry(Next->pawn_key);
 	    prefetch((char *)PawnEntry,_MM_HINT_NTA);
 	}
-	if (F(Next->material & FlagUnusualMaterial)) prefetch((char *)(Material + Next->material), _MM_HINT_NTA); 
-	if (Current->ep_square) Next->key ^= EPKey[File(Current->ep_square)];
+	if (!(Next->material & FlagUnusualMaterial)) prefetch((char *)(Material + Next->material), _MM_HINT_NTA); 
+	if (Current->ep_square) Next->key ^= EPKey[file_of(Current->ep_square)];
 	Next->turn = Current->turn ^ 1;
 	Next->key ^= TurnKey;
 	Entry = TT.top(Next->key);
@@ -172,7 +172,7 @@ non_capture:
 			Square(to) = piece;
 		    Next->material += MatCode[piece] - MatCode[IPawn(me)];
 			if (piece < WhiteRook) {
-				if (piece >= WhiteLight && T(BB(piece))) Next->material |= FlagUnusualMaterial;
+				if (piece >= WhiteLight && BB(piece) != 0) Next->material |= FlagUnusualMaterial;
 				if (Multiple(BB(piece))) Next->material |= FlagUnusualMaterial;
 			} else if (Multiple(BB(piece))) Next->material |= FlagUnusualMaterial;
 			Pawn(me) ^= mask_to;
@@ -183,7 +183,7 @@ non_capture:
 		} else if ((to ^ from) == 16) {
 			if (PAtt[me][(to + from) >> 1] & Pawn(opp)) {
 				Next->ep_square = (to + from) >> 1;
-				Next->key ^= EPKey[File(Next->ep_square)];
+				Next->key ^= EPKey[file_of(Next->ep_square)];
 			}
 		}
 		PawnEntry = PAWNHASH.entry(Next->pawn_key);
@@ -227,7 +227,7 @@ non_capture:
 		}
 	}
 
-	if (Current->ep_square) Next->key ^= EPKey[File(Current->ep_square)];
+	if (Current->ep_square) Next->key ^= EPKey[file_of(Current->ep_square)];
 	Next->turn = opp;
 	Next->key ^= TurnKey;
 	Entry = TT.top(Next->key);
@@ -315,7 +315,7 @@ void Position::do_null() {
 	Next->castle_flags = Current->castle_flags;
 	Next->ep_square = 0;
 	Next->capture = 0;
-	if (Current->ep_square) Next->key ^= EPKey[File(Current->ep_square)];
+	if (Current->ep_square) Next->key ^= EPKey[file_of(Current->ep_square)];
 	sp++;	
 	Next->att[White] = Current->att[White];
 	Next->att[Black] = Current->att[Black];
@@ -371,16 +371,16 @@ template <bool me> int Position::is_legal(int move) {
 	if (piece == IPawn(me)) {
 		if (u & PMove[me][from]) {
             if (capture) return 0;
-			if (T(u & Line(me,7)) && !IsPromotion(move)) return 0;
+			if ((u & Line(me,7)) != 0 && !IsPromotion(move)) return 0;
 			return 1;
 		} else if (to == (from + 2 * Push(me))) {
             if (capture) return 0;
 			if (Square(to - Push(me))) return 0;
-			if (F(u & Line(me,3))) return 0;
+			if (!(u & Line(me,3))) return 0;
 			return 1;
 		} else if (u & PAtt[me][from]) {
             if (capture == 0) return 0;
-			if (T(u & Line(me,7)) && !IsPromotion(move)) return 0;
+			if ((u & Line(me,7)) != 0 && !IsPromotion(move)) return 0;
 			return 1;
 		} else return 0;
 	} else if (piece == IKing(me)) {
@@ -411,7 +411,7 @@ template <bool me> int Position::is_legal(int move) {
 				return 1;
 			}
 		}
-        if (F(SArea[from] & u)) return 0;
+        if (!(SArea[from] & u)) return 0;
 	    if (Current->att[opp] & u) return 0;
 		return 1;
 	}
@@ -439,18 +439,18 @@ template <bool me> int Position::is_check(int move) { // doesn't detect castling
 	king = King(opp);
 	king_sq = lsb(king);
 	piece = Square(from);
-	if (T(Bit(from) & Current->xray[me]) && F(FullLine[king_sq][from] & Bit(to))) return 1;
+	if ((Bit(from) & Current->xray[me]) != 0 && !(FullLine[king_sq][from] & Bit(to))) return 1;
 	if (piece < WhiteKnight) {
 		if (PAtt[me][to] & king) return 1;
-		if (T(Bit(to) & Line(me, 7)) && T(king & Line(me, 7)) && F(Between[to][king_sq] & PieceAll)) return 1;
+		if ((Bit(to) & Line(me, 7)) != 0 && (king & Line(me, 7)) != 0 && !(Between[to][king_sq] & PieceAll)) return 1;
 	} else if (piece < WhiteLight) {
 		if (NAtt[to] & king) return 1;
 	} else if (piece < WhiteRook) {
-		if (BMask[to] & king) if (F(Between[king_sq][to] & PieceAll)) return 1;
+		if (BMask[to] & king) if (!(Between[king_sq][to] & PieceAll)) return 1;
 	} else if (piece < WhiteQueen) {
-		if (RMask[to] & king) if (F(Between[king_sq][to] & PieceAll)) return 1;
+		if (RMask[to] & king) if (!(Between[king_sq][to] & PieceAll)) return 1;
 	} else if (piece < WhiteKing) {
-		if (QMask[to] & king) if (F(Between[king_sq][to] & PieceAll)) return 1;
+		if (QMask[to] & king) if (!(Between[king_sq][to] & PieceAll)) return 1;
 	}
 	return 0;
 }
@@ -473,7 +473,7 @@ template <bool me> void do_move(int move)
 	Next = Current + 1;
 	Next->ep_square = 0;
 	capture = Square(to);
-    if (F(capture)) {
+    if (!(capture)) {
 		Next->capture = 0;
 		goto non_capture;
     }
@@ -531,8 +531,8 @@ template <bool me> void do_move(int move)
 		PawnEntry = PAWNHASH.entry(Next->pawn_key);
 	    prefetch((char *)PawnEntry,_MM_HINT_NTA);
 	}
-	if (F(Next->material & FlagUnusualMaterial)) prefetch((char *)(Material + Next->material), _MM_HINT_NTA); 
-	if (Current->ep_square) Next->key ^= EPKey[File(Current->ep_square)];
+	if (!(Next->material & FlagUnusualMaterial)) prefetch((char *)(Material + Next->material), _MM_HINT_NTA); 
+	if (Current->ep_square) Next->key ^= EPKey[file_of(Current->ep_square)];
 	Next->turn = Current->turn ^ 1;
 	Next->key ^= TurnKey;
 	Entry = TT.top(Next->key);
@@ -584,7 +584,7 @@ non_capture:
 		} else if ((to ^ from) == 16) {
 			if (PAtt[me][(to + from) >> 1] & Pawn(opp)) {
 				Next->ep_square = (to + from) >> 1;
-				Next->key ^= EPKey[File(Next->ep_square)];
+				Next->key ^= EPKey[file_of(Next->ep_square)];
 			}
 		}
 		PawnEntry = PAWNHASH.entry(Next->pawn_key);
@@ -624,7 +624,7 @@ non_capture:
 		}
 	}
 
-	if (Current->ep_square) Next->key ^= EPKey[File(Current->ep_square)];
+	if (Current->ep_square) Next->key ^= EPKey[file_of(Current->ep_square)];
 	Next->turn = opp;
 	Next->key ^= TurnKey;
 	Entry = TT.top(Next->key);
@@ -706,7 +706,7 @@ void do_null() {
 	Next->castle_flags = Current->castle_flags;
 	Next->ep_square = 0;
 	Next->capture = 0;
-	if (Current->ep_square) Next->key ^= EPKey[File(Current->ep_square)];
+	if (Current->ep_square) Next->key ^= EPKey[file_of(Current->ep_square)];
 	sp++;	
 	Next->att[White] = Current->att[White];
 	Next->att[Black] = Current->att[Black];
@@ -766,7 +766,7 @@ template <bool me> int is_legal(int move) {
 		} else if (to == (from + 2 * Push(me))) {
             if (capture) return 0;
 			if (Square(to - Push(me))) return 0;
-			if (F(u & Line(me,3))) return 0;
+			if (!(u & Line(me,3))) return 0;
 			return 1;
 		} else if (u & PAtt[me][from]) {
             if (capture == 0) return 0;
@@ -801,7 +801,7 @@ template <bool me> int is_legal(int move) {
 				return 1;
 			}
 		}
-        if (F(SArea[from] & u)) return 0;
+        if (!(SArea[from] & u)) return 0;
 	    if (Current->att[opp] & u) return 0;
 		return 1;
 	}
@@ -828,18 +828,18 @@ template <bool me> int is_check(int move) { // doesn't detect castling and ep ch
 	king = King(opp);
 	king_sq = lsb(king);
 	piece = Square(from);
-	if (T(Bit(from) & Current->xray[me]) && F(FullLine[king_sq][from] & Bit(to))) return 1;
+	if (T(Bit(from) & Current->xray[me]) && !(FullLine[king_sq][from] & Bit(to))) return 1;
 	if (piece < WhiteKnight) {
 		if (PAtt[me][to] & king) return 1;
-		if (T(Bit(to) & Line(me, 7)) && T(king & Line(me, 7)) && F(Between[to][king_sq] & PieceAll)) return 1;
+		if (T(Bit(to) & Line(me, 7)) && T(king & Line(me, 7)) && !(Between[to][king_sq] & PieceAll)) return 1;
 	} else if (piece < WhiteLight) {
 		if (NAtt[to] & king) return 1;
 	} else if (piece < WhiteRook) {
-		if (BMask[to] & king) if (F(Between[king_sq][to] & PieceAll)) return 1;
+		if (BMask[to] & king) if (!(Between[king_sq][to] & PieceAll)) return 1;
 	} else if (piece < WhiteQueen) {
-		if (RMask[to] & king) if (F(Between[king_sq][to] & PieceAll)) return 1;
+		if (RMask[to] & king) if (!(Between[king_sq][to] & PieceAll)) return 1;
 	} else if (piece < WhiteKing) {
-		if (QMask[to] & king) if (F(Between[king_sq][to] & PieceAll)) return 1;
+		if (QMask[to] & king) if (!(Between[king_sq][to] & PieceAll)) return 1;
 	}
 	return 0;
 }
@@ -858,17 +858,17 @@ template <bool me> int Position::see(int move, int margin) {
 	if (delta <= -margin) return 1;
 	if (piece == SeeValue[WhiteKing]) return 1;
 	if (Current->xray[me] & Bit(from)) return 1;
-	if (T(Current->pin[me] & Bit(from)) && piece <= SeeValue[WhiteDark]) return 1;
+	if ((Current->pin[me] & Bit(from)) != 0 && piece <= SeeValue[WhiteDark]) return 1;
 	if (piece > (SeeValue[WhiteKing] >> 1)) return 1;
 	if (IsEP(move)) return 1;
-	if (F(Current->att[opp] & Bit(to))) return 1;
+	if (!(Current->att[opp] & Bit(to))) return 1;
 	att = PAtt[me][to] & Pawn(opp);
-	if (T(att) && delta + margin > SeeValue[WhitePawn]) return 0;
+	if (att != 0 && delta + margin > SeeValue[WhitePawn]) return 0;
 	clear = ~Bit(from);
 	def = PAtt[opp][to] & Pawn(me) & clear;
-	if (T(def) && delta + SeeValue[WhitePawn] + margin <= 0) return 1;
+	if (def != 0 && delta + SeeValue[WhitePawn] + margin <= 0) return 1;
 	att |= NAtt[to] & Knight(opp);
-	if (T(att) && delta > SeeValue[WhiteDark] - margin) return 0;
+	if (att != 0 && delta > SeeValue[WhiteDark] - margin) return 0;
 	occ = PieceAll & clear;
     b_area = BishopAttacks(to,occ);
 	opp_bishop = Bishop(opp);
@@ -893,9 +893,9 @@ template <bool me> int Position::see(int move, int margin) {
 			sq = lsb(u);
 			occ ^= Bit(sq);
 			att ^= Bit(sq);
-			for (new_att = FullLine[to][sq] & b_slider_att & occ & (~att); T(new_att); Cut(new_att)) {
+			for (new_att = FullLine[to][sq] & b_slider_att & occ & (~att); new_att != 0; Cut(new_att)) {
                 pos = lsb(new_att);
-				if (F(Between[to][pos] & occ)) {
+				if (!(Between[to][pos] & occ)) {
                     Add(att,pos);
 					break;
 				}
@@ -910,9 +910,9 @@ template <bool me> int Position::see(int move, int margin) {
 			sq = lsb(u);
 			occ ^= Bit(sq);
 			att ^= Bit(sq);
-			for (new_att = FullLine[to][sq] & b_slider_att & occ & (~att); T(new_att); Cut(new_att)) {
+			for (new_att = FullLine[to][sq] & b_slider_att & occ & (~att); new_att != 0; Cut(new_att)) {
                 pos = lsb(new_att);
-				if (F(Between[to][pos] & occ)) {
+				if (!(Between[to][pos] & occ)) {
                     Add(att,pos);
 					break;
 				}
@@ -923,9 +923,9 @@ template <bool me> int Position::see(int move, int margin) {
 			sq = lsb(u);
 			occ ^= Bit(sq);
 			att ^= Bit(sq);
-			for (new_att = FullLine[to][sq] & r_slider_att & occ & (~att); T(new_att); Cut(new_att)) {
+			for (new_att = FullLine[to][sq] & r_slider_att & occ & (~att); new_att != 0; Cut(new_att)) {
                 pos = lsb(new_att);
-				if (F(Between[to][pos] & occ)) {
+				if (!(Between[to][pos] & occ)) {
                     Add(att,pos);
 					break;
 				}
@@ -936,9 +936,9 @@ template <bool me> int Position::see(int move, int margin) {
 			sq = lsb(u);
 			occ ^= Bit(sq);
 			att ^= Bit(sq);
-			for (new_att = FullLine[to][sq] & (r_slider_att | b_slider_att) & occ & (~att); T(new_att); Cut(new_att)) {
+			for (new_att = FullLine[to][sq] & (r_slider_att | b_slider_att) & occ & (~att); new_att != 0; Cut(new_att)) {
                 pos = lsb(new_att);
-				if (F(Between[to][pos] & occ)) {
+				if (!(Between[to][pos] & occ)) {
                     Add(att,pos);
 					break;
 				}
@@ -955,9 +955,9 @@ template <bool me> int Position::see(int move, int margin) {
             sq = lsb(u);
 			occ ^= Bit(sq);
 			def ^= Bit(sq);
-			for (new_att = FullLine[to][sq] & b_slider_def & occ & (~att); T(new_att); Cut(new_att)) {
+			for (new_att = FullLine[to][sq] & b_slider_def & occ & (~att); new_att != 0; Cut(new_att)) {
                 pos = lsb(new_att);
-				if (F(Between[to][pos] & occ)) {
+				if (!(Between[to][pos] & occ)) {
                     Add(def,pos);
 					break;
 				}
@@ -972,9 +972,9 @@ template <bool me> int Position::see(int move, int margin) {
             sq = lsb(u);
 			occ ^= Bit(sq);
 			def ^= Bit(sq);
-			for (new_att = FullLine[to][sq] & b_slider_def & occ & (~att); T(new_att); Cut(new_att)) {
+			for (new_att = FullLine[to][sq] & b_slider_def & occ & (~att); new_att != 0; Cut(new_att)) {
                 pos = lsb(new_att);
-				if (F(Between[to][pos] & occ)) {
+				if (!(Between[to][pos] & occ)) {
                     Add(def,pos);
 					break;
 				}
@@ -985,9 +985,9 @@ template <bool me> int Position::see(int move, int margin) {
             sq = lsb(u);
 			occ ^= Bit(sq);
 			def ^= Bit(sq);
-			for (new_att = FullLine[to][sq] & r_slider_def & occ & (~att); T(new_att); Cut(new_att)) {
+			for (new_att = FullLine[to][sq] & r_slider_def & occ & (~att); new_att != 0; Cut(new_att)) {
                 pos = lsb(new_att);
-				if (F(Between[to][pos] & occ)) {
+				if (!(Between[to][pos] & occ)) {
                     Add(def,pos);
 					break;
 				}
@@ -998,9 +998,9 @@ template <bool me> int Position::see(int move, int margin) {
 			sq = lsb(u);
 			occ ^= Bit(sq);
 			def ^= Bit(sq);
-			for (new_att = FullLine[to][sq] & (r_slider_def | b_slider_def) & occ & (~att); T(new_att); Cut(new_att)) {
+			for (new_att = FullLine[to][sq] & (r_slider_def | b_slider_def) & occ & (~att); new_att != 0; Cut(new_att)) {
                 pos = lsb(new_att);
-				if (F(Between[to][pos] & occ)) {
+				if (!(Between[to][pos] & occ)) {
                     Add(def,pos);
 					break;
 				}
