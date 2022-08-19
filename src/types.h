@@ -14,7 +14,7 @@ This software is released under the MIT License, see "LICENSE.txt".
 #include <inttypes.h>
 
 // bitboard
-using bitboard_t = uint64_t;
+#include "bitboard.h"
 
 using Move = uint16_t;
 
@@ -26,33 +26,56 @@ constexpr bool Odd(int x) { return (((x)&1) != 0); }
 #define Opening(x) (int16_t((x)&0xFFFF))
 #define Endgame(x) ((((x) >> 15) & 1) + (int16_t((x) >> 16)))
 
-constexpr int file_of(int x) { return ((x)&7); }
-constexpr int rank_of(int x) { return ((x) >> 3); }
+constexpr int file_of(int sq)
+{
+#if defined(SHOGI)
+	return sq / 9;
+#else
+	return sq & 7;
+#endif
+}
+
+constexpr int rank_of(int sq)
+{
+#if defined(SHOGI)
+	return sq % 9;
+#else
+	return sq >> 3;
+#endif
+}
+
+constexpr int make_sq(int rank, int file)
+{
+#if defined(SHOGI)
+	return rank + 9 * file;
+#else
+	return rank * 8 + file;
+#endif
+}
+
 #define CRank(me, x) ((me) ? (7 - rank_of(x)) : rank_of(x))
 #define NDiag(x) (7 - file_of(x) + rank_of(x))
 #define SDiag(x) (file_of(x) + rank_of(x))
 #define Dist(x, y) std::max(std::abs(rank_of(x) - rank_of(y)), std::abs(file_of(x) - file_of(y)))
 #define VarC(var, me) ((me) ? (var##_b) : (var##_w))
 #define PVarC(prefix, var, me) ((me) ? (prefix.var##_b) : (prefix.var##_w))
-
-constexpr uint64_t Bit(int x)
+#if defined(SHOGI)
+constexpr bitboard_t Bit(uint32_t x)
 {
-	return (1ULL << x);
+	bitboard_t a = {.u64[0] = (x < 63) ? 1ULL << x : 0, .u64[1] = (x < 63) ? 0 : 1ULL << (x - 63)};
+	return a;
 }
+#else
+constexpr uint64_t Bit(int x) { return (1ULL << x); }
+#endif
 #define Cut(x) (x &= (x)-1)
-constexpr bool Multiple(int x)
-{
-	return ((x) & ((x)-1)) != 0;
-}
+constexpr bool Multiple(int x) { return ((x) & ((x)-1)) != 0; }
 constexpr bool Single(int x) { return ((x) & ((x)-1)) == 0; }
 #define Add(x, b) (x |= Bit(b))
 
 constexpr int From(Move move) { return (((move) >> 6) & 0x3f); }
 constexpr int To(Move move) { return ((move)&0x3f); }
-inline void SetScore(int &move, int score)
-{
-	(move = ((move & 0xFFFF) | (score << 16)));
-}
+inline void SetScore(int &move, int score) { (move = ((move & 0xFFFF) | (score << 16))); }
 
 // Memo: L299
 #define BB(i) Board->bb[i]
@@ -77,17 +100,6 @@ inline void SetScore(int &move, int score)
 #define KingPos(me) (lsb(King(me)))
 
 // Memo: L106
-constexpr bitboard_t Empty = 0ULL;
-constexpr bitboard_t Filled = ~Empty;
-constexpr bitboard_t Interior = 0x007E7E7E7E7E7E00ULL;
-constexpr bitboard_t Boundary = ~Interior;
-constexpr bitboard_t WhiteArea = 0x00000000FFFFFFFFULL;
-constexpr bitboard_t BlackArea = ~WhiteArea;
-constexpr bitboard_t LightArea = 0x55AA55AA55AA55AAULL;
-constexpr bitboard_t DarkArea = ~LightArea;
-constexpr bitboard_t FileA = 0x0101010101010101ULL;
-constexpr bitboard_t Line0 = 0x00000000000000FFULL;
-
 constexpr uint32_t High32(uint64_t x) { return static_cast<uint32_t>((x) >> 32); }
 constexpr uint32_t Low32(uint64_t x) { return static_cast<uint32_t>(x); }
 
@@ -108,28 +120,56 @@ constexpr uint32_t Low32(uint64_t x) { return static_cast<uint32_t>(x); }
 #define WhiteKing 14
 #define BlackKing 15
 
+// clang-format off
+enum File_e {
+#if defined(SHOGI)
+	File_1, File_2, File_3, File_4, File_5, File_6, File_7, File_8, File_9, NFile
+#else
+	File_A, File_B, File_C, File_D, File_E, File_F, File_G, File_H, NFile
+#endif
+};
+enum Rank_e {
+#if defined(SHOGI)
+	Rank_A, Rank_B, Rank_C, Rank_D, Rank_E, Rank_F, Rank_G, Rank_H, Rank_I, NRank
+#else
+	Rank_1, Rank_2, Rank_3, Rank_4, Rank_5, Rank_6, Rank_7, Rank_8, NRank
+#endif
+};
+enum Square_e {
+#if defined(SHOGI)
+	SQ_1A, SQ_1B, SQ_1C, SQ_1D, SQ_1E, SQ_1F, SQ_1G, SQ_1H, SQ_1I,
+	SQ_2A, SQ_2B, SQ_2C, SQ_2D, SQ_2E, SQ_2F, SQ_2G, SQ_2H, SQ_2I,
+	SQ_3A, SQ_3B, SQ_3C, SQ_3D, SQ_3E, SQ_3F, SQ_3G, SQ_3H, SQ_3I,
+	SQ_4A, SQ_4B, SQ_4C, SQ_4D, SQ_4E, SQ_4F, SQ_4G, SQ_4H, SQ_4I,
+	SQ_5A, SQ_5B, SQ_5C, SQ_5D, SQ_5E, SQ_5F, SQ_5G, SQ_5H, SQ_5I,
+	SQ_6A, SQ_6B, SQ_6C, SQ_6D, SQ_6E, SQ_6F, SQ_6G, SQ_6H, SQ_6I,
+	SQ_7A, SQ_7B, SQ_7C, SQ_7D, SQ_7E, SQ_7F, SQ_7G, SQ_7H, SQ_7I,
+	SQ_8A, SQ_8B, SQ_8C, SQ_8D, SQ_8E, SQ_8F, SQ_8G, SQ_8H, SQ_8I,
+	SQ_9A, SQ_9B, SQ_9C, SQ_9D, SQ_9E, SQ_9F, SQ_9G, SQ_9H, SQ_9I, SQ_SIZE
+#else
+	A8, B8, C8, D8, E8, F8, G8, H8,
+	A7, B7, C7, D7, E7, F7, G7, H7,
+	A6, B6, C6, D6, E6, F6, G6, H6,
+	A5, B5, C5, D5, E5, F5, G5, H5,
+	A4, B4, C4, D4, E4, F4, G4, H4,
+	A3, B3, C3, D3, E3, F3, G3, H3,
+	A2, B2, C2, D2, E2, F2, G2, H2,
+	A1, B1, C1, D1, E1, F1, G1, H1, SQ_SIZE
+#endif
+};
+// clang-format on
+
 ///#define FlagPKnight 0x4000
 ///#define FlagPLight 0x6000
 ///#define FlagPDark 0x8000
 ///#define FlagPRook 0xA000
 #define FlagPQueen 0xC000
 
-constexpr bool IsPromotion(Move move)
-{
-	return ((move & 0xC000) != 0);
-}
+constexpr bool IsPromotion(Move move) { return ((move & 0xC000) != 0); }
 constexpr int Promotion(Move move, int side) { return ((side) + (((move)&0xF000) >> 12)); }
 
-#define BishopAttacks(sq, occ)      \
-	(*(BOffsetPointer[sq] +         \
-	   (((BMagicMask[sq] & (occ)) * \
-		 BMagic[sq]) >>             \
-		BShift[sq])))
-#define RookAttacks(sq, occ)        \
-	(*(ROffsetPointer[sq] +         \
-	   (((RMagicMask[sq] & (occ)) * \
-		 RMagic[sq]) >>             \
-		RShift[sq])))
+#define BishopAttacks(sq, occ) (*(BOffsetPointer[sq] + (((BMagicMask[sq] & (occ)) * BMagic[sq]) >> BShift[sq])))
+#define RookAttacks(sq, occ) (*(ROffsetPointer[sq] + (((RMagicMask[sq] & (occ)) * RMagic[sq]) >> RShift[sq])))
 
 #define QueenAttacks(sq, occ) (BishopAttacks(sq, occ) | RookAttacks(sq, occ))
 
@@ -145,16 +185,18 @@ constexpr int Promotion(Move move, int side) { return ((side) + (((move)&0xF000)
 #define MatBN (3 * 3 * 3 * 3 * 2 * 2 * 2 * 2 * 3)
 #define MatWP (3 * 3 * 3 * 3 * 2 * 2 * 2 * 2 * 3 * 3)
 #define MatBP (3 * 3 * 3 * 3 * 2 * 2 * 2 * 2 * 3 * 3 * 9)
-#define TotalMat ((2 * (MatWQ + MatBQ) + MatWL + MatBL + MatWD + MatBD + 2 * (MatWR + MatBR + MatWN + MatBN) + 8 * (MatWP + MatBP)) + 1)
+#define TotalMat                                                                                                       \
+	((2 * (MatWQ + MatBQ) + MatWL + MatBL + MatWD + MatBD + 2 * (MatWR + MatBR + MatWN + MatBN) +                      \
+	  8 * (MatWP + MatBP)) +                                                                                           \
+	 1)
 
 #define magic_size 107648 // 2*64*29*29
 
 #define FlagUnusualMaterial (1 << 30)
 
 // Memo: L280
-constexpr int MatCode[16] = {0, 0, MatWP, MatBP, MatWN, MatBN, MatWL, MatBL, MatWD, MatBD, MatWR, MatBR, MatWQ, MatBQ, 0, 0};
-constexpr bitboard_t File[8] = {FileA, FileA << 1, FileA << 2, FileA << 3, FileA << 4, FileA << 5, FileA << 6, FileA << 7};
-constexpr bitboard_t Line[8] = {Line0, (Line0 << 8), (Line0 << 16), (Line0 << 24), (Line0 << 32), (Line0 << 40), (Line0 << 48), (Line0 << 56)};
+constexpr int MatCode[16] = {0,     0,     MatWP, MatBP, MatWN, MatBN, MatWL, MatBL,
+                             MatWD, MatBD, MatWR, MatBR, MatWQ, MatBQ, 0,     0};
 
 ///#define opp (1 ^ (me))
 
@@ -207,31 +249,6 @@ extern int RootList[256];
 
 #define prefetch(a, mode) _mm_prefetch(a, mode)
 
-extern uint64_t Forward[2][8];
-extern uint64_t West[8];
-extern uint64_t East[8];
-extern uint64_t PIsolated[8];
-extern uint64_t HLine[64];
-extern uint64_t VLine[64];
-extern uint64_t NDiag[64];
-extern uint64_t SDiag[64];
-extern uint64_t RMask[64];
-extern uint64_t BMask[64];
-extern uint64_t QMask[64];
-extern uint64_t BMagicMask[64];
-extern uint64_t RMagicMask[64];
-extern uint64_t NAtt[64];
-extern uint64_t SArea[64];
-extern uint64_t DArea[64];
-extern uint64_t NArea[64];
-extern uint64_t BishopForward[2][64];
-extern uint64_t PAtt[2][64];
-extern uint64_t PMove[2][64];
-extern uint64_t PWay[2][64];
-extern uint64_t PSupport[2][64];
-extern uint64_t Between[64][64];
-extern uint64_t FullLine[64][64];
-
 // Memo: L479
 extern uint64_t TurnKey;
 extern uint64_t PieceKey[16][64];
@@ -239,9 +256,8 @@ extern uint16_t date;
 
 // Memo: L510
 /// extern uint64_t *MagicAttacks;
-extern uint64_t MagicAttacks[magic_size];
-struct GMaterial
-{
+extern bitboard_t MagicAttacks[magic_size];
+struct GMaterial {
 	int16_t score;
 	uint8_t phase, flags;
 	uint8_t mul[2], pieces[2];
@@ -264,10 +280,10 @@ extern int MultiPV[256];
 extern int Console;
 
 extern int LastTime;
-/// extern int PVN, Stop, Print, Input = 1, PVHashing = 1, Infinite, MoveTime, SearchMoves, SMPointer, Ponder, Searching, Previous;
+/// extern int PVN, Stop, Print, Input = 1, PVHashing = 1, Infinite, MoveTime, SearchMoves, SMPointer, Ponder,
+/// Searching, Previous;
 extern int PVN, Stop, Print, PVHashing, Infinite, MoveTime, Ponder, Searching, Previous;
-struct GSearchInfo
-{
+struct GSearchInfo {
 	int Bad, Change, Singular, Early, FailLow, FailHigh;
 };
 extern GSearchInfo CurrentSI[1], BaseSI[1];
@@ -336,8 +352,8 @@ void check_time(int time, int searching);
 void check_state();
 
 // Memo: L819
-/// enum { TacticalMajorPawn, TacticalMinorPawn, TacticalMajorMinor, TacticalMinorMinor, TacticalThreat, TacticalDoubleThreat };
-/// const int Tactical[12] = { // tuner: type=array, var=20, active=0
+/// enum { TacticalMajorPawn, TacticalMinorPawn, TacticalMajorMinor, TacticalMinorMinor, TacticalThreat,
+/// TacticalDoubleThreat }; const int Tactical[12] = { // tuner: type=array, var=20, active=0
 ///	-1, 5, 0, 5, 11, 29, 23, 32, 19, 11, 41, 12
 /// };
 
@@ -376,8 +392,7 @@ extern int MinF(int x, int y);
 extern int MaxF(int x, int y);
 extern double MinF(double x, double y);
 extern double MaxF(double x, double y);
-template <bool HPopCnt>
-int popcount(uint64_t x);
+template <bool HPopCnt> int popcount(uint64_t x);
 extern uint64_t BMagicAttacks(int i, uint64_t occ);
 extern uint64_t RMagicAttacks(int i, uint64_t occ);
 

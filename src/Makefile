@@ -5,19 +5,19 @@
 #
 # This software is released under the MIT License, see "LICENSE.txt".
 
-#CC=clang++
-CC=g++
+CC=clang++
+#CC=g++
 
 TARGET=Nanoha.exe
-SRCS=Gull.cpp TT.cpp evaluate.cpp misc.cpp uci.cpp position.cpp genmove.cpp \
+SRCS=Gull.cpp TT.cpp bitboard.cpp evaluate.cpp misc.cpp uci.cpp position.cpp genmove.cpp \
 	search.cpp thread.cpp
-OBJS=Gull.o   TT.o   evaluate.o   misc.o   uci.o   position.o   genmove.o \
+OBJS=Gull.o   TT.o   bitboard.o   evaluate.o   misc.o   uci.o   position.o   genmove.o \
 	search.o   thread.o
 
 .cpp.o:
 	$(CC) -c $(CFLAGS) $<
 
-CFLAGS=-fno-exceptions -fno-rtti -Wno-parentheses -D_WIN32_WINNT=0x0601 -Wall -std=gnu++11 -mpopcnt
+CFLAGS=-fno-exceptions -fno-rtti -Wno-parentheses -D_WIN32_WINNT=0x0601 -Wall -std=gnu++11 -mavx2 -mbmi2 -mpopcnt #-DSHOGI
 STRIP=strip
 
 CFLAGS += -Weffc++ -Wenum-compare -Wfloat-equal -Wint-to-pointer-cast \
@@ -42,6 +42,12 @@ release: $(TARGET)
 
 debug: 
 	make DEBUG=yes build
+
+bbtest: bbtest.exe
+	./bbtest
+
+bbtest.exe: bitboard.cpp bitboard.h types.h
+	$(CC) $(CFLAGS) -D WINDOWS -DBBTEST bitboard.cpp $(LDFLAGS) -o bbtest.exe
 
 clean:
 	rm -f $(TARGET) $(OBJS)

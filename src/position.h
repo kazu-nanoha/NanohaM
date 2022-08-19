@@ -12,6 +12,8 @@ This software is released under the MIT License, see "LICENSE.txt".
 
 #include <string>
 
+#include "bitboard.h"
+#include "types.h"
 // Memo: L427
 struct GPosData {
 	uint64_t key;
@@ -30,9 +32,9 @@ struct GData {
 	uint64_t key, eval_key, att[2], patt[2], passer;
 	bitboard_t xray[2], pin[2], threat, mask;
 	uint8_t turn, ply, capture;
-///	uint8_t gen_flags;
+	///	uint8_t gen_flags;
 	uint8_t piece;
-///	uint8_t stage;
+	///	uint8_t stage;
 	uint8_t mul, dummy;
 	int16_t score;
 	uint16_t move, killer[3], ref[2];
@@ -41,20 +43,22 @@ struct GData {
 	int margin;
 
 	// ToDo: 手の制御として、killer[]と合わせてここから外に出したい.
-///	int *start;
-///	int *current;
-///	int moves[230];
+	///	int *start;
+	///	int *current;
+	///	int moves[230];
 };
 
 struct GEvalInfo;
 
-class Position {
-	Position(const Position&) = delete;
-	Position& operator=(const Position&) = delete;
+class Position
+{
+	Position(const Position &) = delete;
+	Position &operator=(const Position &) = delete;
+
 public:
 	Position();
 	~Position();
-	bool set_sfen(const std::string&);
+	bool set_sfen(const std::string &);
 	std::string sfen();
 
 	void init_search();
@@ -66,7 +70,11 @@ public:
 	template <bool me> int is_check(int move);
 
 	void rewind() { Current = Data; }
-	void reset_current() { Data[0] = *Current; Current = Data; }
+	void reset_current()
+	{
+		Data[0] = *Current;
+		Current = Data;
+	}
 	void clear_forward() { memset(Data + 1, 0, 127 * sizeof(GData)); }
 
 	bitboard_t bb(int i) const { return Board->bb[i]; }
@@ -79,15 +87,21 @@ public:
 	void set_mask(bitboard_t bb) { Current->mask = bb; }
 	bitboard_t xray(int me) { return Current->xray[me]; }
 	uint64_t att(int turn) const { return Current->att[turn]; }
-///	uint8_t& gen_flags() {return Current->gen_flags; }
+	///	uint8_t& gen_flags() {return Current->gen_flags; }
 	uint8_t cur_turn() const { return Current->turn; }
 	uint16_t ply() const { return Current->ply; }
 	int16_t score() const { return Current->score; }
 	void set_score(int16_t sc) const { Current->score = sc; }
-	uint16_t& killer(int i) { return Current->killer[i]; }
+	uint16_t &killer(int i) { return Current->killer[i]; }
 	uint16_t ref(int i) const { return Current->ref[i]; }
-	int& best() { return Current->best; }
-	int sel_depth() const { int d; for (d=1; d<127 && Data[d].att[0] != 0; d++); return d-1; }
+	int &best() { return Current->best; }
+	int sel_depth() const
+	{
+		int d;
+		for (d = 1; d < 127 && Data[d].att[0] != 0; d++)
+			;
+		return d - 1;
+	}
 	int height() const { return (int)(Current - Data); }
 	bool is_repeat() const;
 
@@ -105,7 +119,7 @@ public:
 	template <bool HPopCnt> void evaluation();
 
 private:
-public:		// ToDo: privateでビルドできるようにする.
+public: // ToDo: privateでビルドできるようにする.
 	GBoard Board[1];
 	GData Data[128];
 	GData *Current;
@@ -117,15 +131,18 @@ inline bool Position::is_repeat() const
 {
 	int16_t d;
 	for (d = sp - 4; d >= 0; d -= 2) {
-		if (Stack[d] == key()) return true;
+		if (Stack[d] == key())
+			return true;
 	}
 	return false;
 }
 
-
 #define Check(me) ((pos.att((me) ^ 1) & King(me)) != 0)
-#define IsIllegal(me,move) (((pos.xray(opp) & Bit(From(move))) != 0 && !(Bit(To(move)) & FullLine[lsb(King(me))][From(move)])) )
-#define IsRepetition(margin,move) ((margin) > 0 && Current->ply >= 2 && (Current-1)->move == ((To(move) << 6) | From(move)) && !(Square(To(move))) && !((move) & 0xF000))
+#define IsIllegal(me, move)                                                                                            \
+	(((pos.xray(opp) & Bit(From(move))) != 0 && !(Bit(To(move)) & FullLine[lsb(King(me))][From(move)])))
+#define IsRepetition(margin, move)                                                                                     \
+	((margin) > 0 && Current->ply >= 2 && (Current - 1)->move == ((To(move) << 6) | From(move)) &&                     \
+	 !(Square(To(move))) && !((move)&0xF000))
 
 #if 0
 template <bool me> void do_move(int move);
@@ -138,9 +155,9 @@ template <bool me> int is_check(int move);
 
 extern Position root_pos;
 extern GBoard Board[1];
-extern uint64_t Stack[2048];	// ToDo: DEL
-extern int sp, save_sp;			// ToDo: DEL
-extern GData Data[128];	// [ToDo] 数値の意味を確認する.
+extern uint64_t Stack[2048]; // ToDo: DEL
+extern int sp, save_sp;      // ToDo: DEL
+extern GData Data[128];      // [ToDo] 数値の意味を確認する.
 extern GData *Current;
 
 #endif
