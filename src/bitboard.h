@@ -147,4 +147,21 @@ extern bitboard_t PSupport[2][64];
 extern bitboard_t Between[64][64];
 extern bitboard_t FullLine[64][64];
 
+#if defined(SHOGI)
+inline void Cut(bitboard_t &bb)
+{
+	if (bb.u64[0] != 0)
+		bb.u64[0] &= bb.u64[0] - 1;
+	else
+		bb.u64[1] &= bb.u64[1] - 1;
+}
+constexpr int lsb(const bitboard_t bb)
+{
+	return (bb.u64[0] != 0) ? __builtin_ctzll(bb.u64[0]) : 64 + __builtin_ctzll(bb.u64[1]);
+}
+constexpr int msb(const bitboard_t bb)
+{
+	return (bb.u64[1] != 0) ? 64 + (63 ^ __builtin_clzll(bb.u64[1])) : (63 ^ __builtin_clzll(bb.u64[0]));
+}
+#endif
 #endif // !defined(BITBOARD)

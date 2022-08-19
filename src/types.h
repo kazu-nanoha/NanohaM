@@ -68,7 +68,7 @@ constexpr bitboard_t Bit(uint32_t x)
 #else
 constexpr uint64_t Bit(int x) { return (1ULL << x); }
 #endif
-#define Cut(x) (x &= (x)-1)
+inline void Cut(uint64_t &x) { x &= (x - 1); }
 constexpr bool Multiple(int x) { return ((x) & ((x)-1)) != 0; }
 constexpr bool Single(int x) { return ((x) & ((x)-1)) == 0; }
 #define Add(x, b) (x |= Bit(b))
@@ -159,10 +159,6 @@ enum Square_e {
 };
 // clang-format on
 
-///#define FlagPKnight 0x4000
-///#define FlagPLight 0x6000
-///#define FlagPDark 0x8000
-///#define FlagPRook 0xA000
 #define FlagPQueen 0xC000
 
 constexpr bool IsPromotion(Move move) { return ((move & 0xC000) != 0); }
@@ -198,8 +194,6 @@ constexpr int Promotion(Move move, int side) { return ((side) + (((move)&0xF000)
 constexpr int MatCode[16] = {0,     0,     MatWP, MatBP, MatWN, MatBN, MatWL, MatBL,
                              MatWD, MatBD, MatWR, MatBR, MatWQ, MatBQ, 0,     0};
 
-///#define opp (1 ^ (me))
-
 #define IPawn(me) (WhitePawn | (me))
 #define IKnight(me) (WhiteKnight | (me))
 #define ILight(me) (WhiteLight | (me))
@@ -217,17 +211,13 @@ constexpr int MatCode[16] = {0,     0,     MatWP, MatBP, MatWN, MatBN, MatWL, Ma
 #define ShiftN(target) ((target) << 8)
 #define ShiftS(target) ((target) >> 8)
 #define Shift(me, target) ((me) ? ShiftS(target) : ShiftN(target))
-#define PushW(me) ((me) ? (-9) : (7))
-#define PushE(me) ((me) ? (-7) : (9))
-#define Push(me) ((me) ? (-8) : (8))
-#define Dir(me) ((me) ? (-1) : (1))
+constexpr int PushW(bool me) { return ((me) ? (-9) : (7)); }
+constexpr int PushE(bool me) { return ((me) ? (-7) : (9)); }
+constexpr int Push(bool me) { return ((me) ? (-8) : (8)); }
+constexpr int Dir(bool me) { return ((me) ? (-1) : (1)); }
 #define IsGreater(me, x, y) ((me) ? ((x) < (y)) : ((x) > (y)))
 
 #define Line(me, n) ((me) ? Line[7 - n] : Line[n])
-///#define Square(sq) Board->square[sq]
-
-// Memo: L339
-///#define Check(me) T(Current->att[(me) ^ 1] & King(me))
 
 #define IncV(var, x) (me ? (var -= (x)) : (var += (x)))
 #define DecV(var, x) IncV(var, -(x))
@@ -255,7 +245,6 @@ extern uint64_t PieceKey[16][64];
 extern uint16_t date;
 
 // Memo: L510
-/// extern uint64_t *MagicAttacks;
 extern bitboard_t MagicAttacks[magic_size];
 struct GMaterial {
 	int16_t score;
@@ -280,8 +269,6 @@ extern int MultiPV[256];
 extern int Console;
 
 extern int LastTime;
-/// extern int PVN, Stop, Print, Input = 1, PVHashing = 1, Infinite, MoveTime, SearchMoves, SMPointer, Ponder,
-/// Searching, Previous;
 extern int PVN, Stop, Print, PVHashing, Infinite, MoveTime, Ponder, Searching, Previous;
 struct GSearchInfo {
 	int Bad, Change, Singular, Early, FailLow, FailHigh;
@@ -317,12 +304,6 @@ extern int PrN, CPUs, parent, Id, ResetHash, NewPrN;
 #define Sa(x, y) Av(x, 0, 0, y)
 #define Ca(x, y) Compose(Av(x, 0, 0, ((y)*2)), Av(x, 0, 0, ((y)*2) + 1))
 
-// Memo: L777
-/// enum { PasserOnePiece, PasserOpKingControl, PasserOpMinorControl, PasserOpRookBlock };
-/// const int PasserSpecial[4] = { // tuner: type=array, var=100, active=0
-///	0, 0, 0, 13
-/// };
-
 // Memo: L783
 extern int PasserGeneral[8];
 extern int PasserBlocked[8];
@@ -335,8 +316,6 @@ extern int PasserCandidate[8];
 extern int PasserClear[8];
 
 //
-/// void setup_board();
-/// void get_board(const char fen[]);
 void move_to_string(int move, char string[]);
 int move_from_string(const char string[]);
 
@@ -351,26 +330,6 @@ void check_time(int searching);
 void check_time(int time, int searching);
 void check_state();
 
-// Memo: L819
-/// enum { TacticalMajorPawn, TacticalMinorPawn, TacticalMajorMinor, TacticalMinorMinor, TacticalThreat,
-/// TacticalDoubleThreat }; const int Tactical[12] = { // tuner: type=array, var=20, active=0
-///	-1, 5, 0, 5, 11, 29, 23, 32, 19, 11, 41, 12
-/// };
-
-// Memo: L829
-/// enum { PawnChainLinear, PawnChain, PawnBlocked, PawnFileSpan };
-/// const int PawnSpecial[8] = { // tuner: type=array, var=10, active=0
-///	11, 9, 9, 4, 0, 9, 1, 1
-/// };
-
-// struct GBoard {
-//	uint64_t bb[16];
-//	uint8_t square[64];
-// };
-/// extern GBoard Board[1];			// ToDo: DEL
-/// extern uint64_t Stack[2048];	// ToDo: DEL
-/// extern int sp, save_sp;			// ToDo: DEL
-// extern uint64_t nodes, check_node, check_node_smp;
 extern uint64_t nodes, check_node, check_node_smp;
 
 #define FlagSort (1 << 0)

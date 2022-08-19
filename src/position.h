@@ -32,20 +32,13 @@ struct GData {
 	uint64_t key, eval_key, att[2], patt[2], passer;
 	bitboard_t xray[2], pin[2], threat, mask;
 	uint8_t turn, ply, capture;
-	///	uint8_t gen_flags;
 	uint8_t piece;
-	///	uint8_t stage;
 	uint8_t mul, dummy;
 	int16_t score;
 	uint16_t move, killer[3], ref[2];
 	int best;
 	int material, pst;
 	int margin;
-
-	// ToDo: 手の制御として、killer[]と合わせてここから外に出したい.
-	///	int *start;
-	///	int *current;
-	///	int moves[230];
 };
 
 struct GEvalInfo;
@@ -87,7 +80,6 @@ public:
 	void set_mask(bitboard_t bb) { Current->mask = bb; }
 	bitboard_t xray(int me) { return Current->xray[me]; }
 	uint64_t att(int turn) const { return Current->att[turn]; }
-	///	uint8_t& gen_flags() {return Current->gen_flags; }
 	uint8_t cur_turn() const { return Current->turn; }
 	uint16_t ply() const { return Current->ply; }
 	int16_t score() const { return Current->score; }

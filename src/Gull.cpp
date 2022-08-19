@@ -144,15 +144,6 @@ const int MvvLvaAttackerKB[16] = {0, 0, 9, 9, 7, 7, 5, 5, 5, 5, 3, 3, 1, 1, 11, 
 #define MaxRookCaptureMvvLva (MaxBishopCaptureMvvLva + MvvLvaAttacker[15]) // 24
 #define QueenCaptureMvvLva(attacker) (MaxRookCaptureMvvLva + MvvLvaAttacker[attacker])
 
-///#define MvvLvaPromotion (MvvLva[WhiteQueen][BlackQueen])
-///#define MvvLvaPromotionKnight (MvvLva[WhiteKnight][BlackKnight])
-///#define MvvLvaPromotionCap(capture) (MvvLva[((capture) < WhiteRook) ? WhiteRook : ((capture) >= WhiteQueen ?
-/// WhiteKing : WhiteKnight)][BlackQueen]) #define MvvLvaPromotionKnightCap(capture) (MvvLva[WhiteKing][capture])
-/// #define MvvLvaXray (MvvLva[WhiteQueen][WhitePawn]) #define MvvLvaXrayCap(capture) (MvvLva[WhiteKing][capture])
-/// #define RefOneScore ((0xFF << 16) | (3 << 24)) #define RefTwoScore ((0xFF << 16) | (2 << 24)) #define KillerOneScore
-/// ((0xFF
-///<< 16) | (1 << 24)) #define KillerTwoScore (0xFF << 16)
-
 #if 0
 #define halt_check                                                                                                     \
 	if ((Current - Data) >= 126) {                                                                                     \
@@ -165,46 +156,14 @@ const int MvvLvaAttackerKB[16] = {0, 0, 9, 9, 7, 7, 5, 5, 5, 5, 3, 3, 1, 1, 11, 
 		if (Stack[sp - i] == Current->key)                                                                             \
 	return 0
 #endif
-///#define ExtFlag(ext) ((ext) << 16)
-///#define Ext(flags) (((flags) >> 16) & 0xF)
-///#define FlagHashCheck (1 << 20) // first 20 bits are reserved for the hash killer and extension
-///#define FlagHaltCheck (1 << 21)
-///#define FlagCallEvaluation (1 << 22)
-///#define FlagDisableNull (1 << 23)
-///#define FlagNeatSearch (FlagHashCheck | FlagHaltCheck | FlagCallEvaluation)
-///#define FlagNoKillerUpdate (1 << 24)
-///#define FlagReturnBestMove (1 << 25)
-
-///#define MSBZ(x) ((x) ? msb(x) : 63)
-///#define LSBZ(x) ((x) ? lsb(x) : 0)
-///#define NB(me, x) ((me) ? msb(x) : lsb(x))
-///#define NBZ(me, x) ((me) ? MSBZ(x) : LSBZ(x))
 
 alignas(64) GBoard Board[1];
 uint64_t Stack[2048];
 int sp, save_sp;
 uint64_t nodes, check_node, check_node_smp;
-/// GBoard SaveBoard[1];
 
-/// struct GPosData {
-///	uint64_t key, pawn_key;
-///	uint16_t move;
-///	uint8_t turn, castle_flags, ply, ep_square, piece, capture;
-///	uint8_t square[64];
-///	int pst, material;
-/// };
 alignas(64) GData Data[128]; // [ToDo] 数値の意味を確認する.
 GData *Current = Data;
-///#define FlagSort (1 << 0)
-///#define FlagNoBcSort (1 << 1)
-/// GData SaveData[1];
-
-/// enum {
-///	stage_search, s_hash_move, s_good_cap, s_special, s_quiet, s_bad_cap, s_none,
-///	stage_evasion, e_hash_move, e_ev, e_none,
-///	stage_razoring, r_hash_move, r_cap, r_checks, r_none
-/// };
-///#define StageNone ((1 << s_none) | (1 << e_none) | (1 << r_none))
 
 int RootList[256];
 
@@ -212,7 +171,7 @@ int RootList[256];
 
 /// uint64_t * MagicAttacks;
 /// GMaterial * Material;
-uint64_t MagicAttacks[magic_size];
+bitboard_t MagicAttacks[magic_size];
 GMaterial Material[TotalMat];
 ///#define FlagSingleBishop_w (1 << 0)
 ///#define FlagSingleBishop_b (1 << 1)
@@ -221,8 +180,6 @@ GMaterial Material[TotalMat];
 
 uint64_t TurnKey;
 uint64_t PieceKey[16][64];
-uint64_t CastleKey[16];
-uint64_t EPKey[8];
 uint16_t date;
 
 uint64_t Kpk[2][64][64];
@@ -484,9 +441,9 @@ uint16_t rand16()
 
 bitboard_t BMagicAttacks(int i, bitboard_t occ)
 {
-	bitboard_t att = 0;
+	bitboard_t att = Empty;
 	for (bitboard_t u = BMask[i]; u != Empty; Cut(u)) {
-		if (!(Between[i][lsb(u)] & occ))
+		if ((Between[i][lsb(u)] & occ) == Empty)
 			att |= Between[i][lsb(u)] | Bit(lsb(u));
 	}
 	return att;
@@ -495,8 +452,8 @@ bitboard_t BMagicAttacks(int i, bitboard_t occ)
 bitboard_t RMagicAttacks(int i, bitboard_t occ)
 {
 	bitboard_t att = Empty;
-	for (uint64_t u = RMask[i]; u != Empty; Cut(u)) {
-		if (!(Between[i][lsb(u)] & occ))
+	for (bitboard_t u = RMask[i]; u != Empty; Cut(u)) {
+		if ((Between[i][lsb(u)] & occ) == Empty)
 			att |= Between[i][lsb(u)] | Bit(lsb(u));
 	}
 	return att;
@@ -516,7 +473,7 @@ uint64_t rand64()
 void init_misc()
 {
 	int i, j, k, l, n;
-	uint64_t u;
+	bitboard_t u;
 
 	for (i = 0; i < 64; i++) {
 		HLine[i] = VLine[i] = NDiag[i] = SDiag[i] = RMask[i] = BMask[i] = QMask[i] = Empty;
@@ -583,14 +540,14 @@ void init_misc()
 		if (rank_of(i) < 7)
 			RMagicMask[i] &= ~Line[7];
 		for (j = 0; j < 64; j++)
-			if (NAtt[i] & NAtt[j])
+			if ((NAtt[i] & NAtt[j]) != Empty)
 				Add(NArea[i], j);
 	}
 	for (i = 0; i < 8; i++) {
-		West[i] = 0;
-		East[i] = 0;
-		Forward[0][i] = Forward[1][i] = 0;
-		PIsolated[i] = 0;
+		West[i] = Empty;
+		East[i] = Empty;
+		Forward[0][i] = Forward[1][i] = Empty;
+		PIsolated[i] = Empty;
 		for (j = 0; j < 8; j++) {
 			if (i < j)
 				Forward[0][i] |= Line[j];
@@ -607,18 +564,18 @@ void init_misc()
 			PIsolated[i] |= File[i + 1];
 	}
 	for (i = 0; i < 64; i++) {
-		for (u = QMask[i]; u != 0; Cut(u)) {
+		for (u = QMask[i]; u != Empty; Cut(u)) {
 			j = lsb(u);
 			k = Sgn(rank_of(j) - rank_of(i));
 			l = Sgn(file_of(j) - file_of(i));
 			for (n = i + 8 * k + l; n != j; n += (8 * k + l))
 				Add(Between[i][j], n);
 		}
-		for (u = BMask[i]; u != 0; Cut(u)) {
+		for (u = BMask[i]; u != Empty; Cut(u)) {
 			j = lsb(u);
 			FullLine[i][j] = BMask[i] & BMask[j];
 		}
-		for (u = RMask[i]; u != 0; Cut(u)) {
+		for (u = RMask[i]; u != Empty; Cut(u)) {
 			j = lsb(u);
 			FullLine[i][j] = RMask[i] & RMask[j];
 		}
@@ -650,24 +607,20 @@ void init_misc()
 
 	for (i = 0; i < 256; i++)
 		PieceFromChar[i] = 0;
-	PieceFromChar[66] = 6;
-	PieceFromChar[75] = 14;
-	PieceFromChar[78] = 4;
-	PieceFromChar[80] = 2;
-	PieceFromChar[81] = 12;
-	PieceFromChar[82] = 10;
-	PieceFromChar[98] = 7;
-	PieceFromChar[107] = 15;
-	PieceFromChar[110] = 5;
-	PieceFromChar[112] = 3;
-	PieceFromChar[113] = 13;
-	PieceFromChar[114] = 11;
+	PieceFromChar['B'] = 6;
+	PieceFromChar['K'] = 14;
+	PieceFromChar['N'] = 4;
+	PieceFromChar['P'] = 2;
+	PieceFromChar['Q'] = 12;
+	PieceFromChar['R'] = 10;
+	PieceFromChar['b'] = 7;
+	PieceFromChar['k'] = 15;
+	PieceFromChar['n'] = 5;
+	PieceFromChar['p'] = 3;
+	PieceFromChar['q'] = 13;
+	PieceFromChar['r'] = 11;
 
 	TurnKey = rand64();
-	for (i = 0; i < 8; i++)
-		EPKey[i] = rand64();
-	for (i = 0; i < 16; i++)
-		CastleKey[i] = rand64();
 	for (i = 0; i < 16; i++)
 		for (j = 0; j < 64; j++) {
 			if (i == 0)
@@ -683,10 +636,10 @@ void init_magic()
 	int i;
 	uint64_t j;
 	int k, index, bits, bit_list[16];
-	uint64_t u;
+	bitboard_t u;
 	for (i = 0; i < 64; i++) {
 		bits = 64 - BShift[i];
-		for (u = BMagicMask[i], j = 0; u != 0; Cut(u), j++)
+		for (u = BMagicMask[i], j = 0; u != Empty; Cut(u), j++)
 			bit_list[j] = lsb(u);
 		for (j = 0; j < Bit(bits); j++) {
 			u = 0;
@@ -701,7 +654,7 @@ void init_magic()
 			MagicAttacks[index] = BMagicAttacks(i, u);
 		}
 		bits = 64 - RShift[i];
-		for (u = RMagicMask[i], j = 0; u != 0; Cut(u), j++)
+		for (u = RMagicMask[i], j = 0; u != Empty; Cut(u), j++)
 			bit_list[j] = lsb(u);
 		for (j = 0; j < Bit(bits); j++) {
 			u = 0;
