@@ -219,7 +219,7 @@ constexpr int Dir(bool me) { return ((me) ? (-1) : (1)); }
 #define EvalValue 30000
 #define MateValue 32760
 
-extern uint64_t Kpk[2][64][64];
+extern bitboard_t Kpk[2][64][64];
 
 // Memo: L408
 #define MSBZ(x) ((x) ? msb(x) : 63)

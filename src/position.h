@@ -130,7 +130,7 @@ inline bool Position::is_repeat() const
 	return false;
 }
 
-#define Check(me) ((pos.att((me) ^ 1) & King(me)) != 0)
+#define Check(me) ((pos.att((me) ^ 1) & King(me)) != Empty)
 #define IsIllegal(me, move)                                                                                            \
 	(((pos.xray(opp) & Bit(From(move))) != Empty && testz_bb(Bit(To(move)), FullLine[lsb(King(me))][From(move)])))
 #define IsRepetition(margin, move)                                                                                     \
