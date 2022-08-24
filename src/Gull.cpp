@@ -182,7 +182,7 @@ uint64_t TurnKey;
 uint64_t PieceKey[16][64];
 uint16_t date;
 
-uint64_t Kpk[2][64][64];
+bitboard_t Kpk[2][64][64];
 
 #if 0 // ToDo: DEL
 int16_t History[16 * 64];
@@ -582,9 +582,9 @@ void init_misc()
 		BishopForward[0][i] |= PWay[0][i];
 		BishopForward[1][i] |= PWay[1][i];
 		for (j = 0; j < 64; j++) {
-			if ((PWay[1][j] | Bit(j)) & BMask[i] & Forward[0][rank_of(i)])
+			if (((PWay[1][j] | Bit(j)) & BMask[i] & Forward[0][rank_of(i)]) != Empty)
 				BishopForward[0][i] |= Bit(j);
-			if ((PWay[0][j] | Bit(j)) & BMask[i] & Forward[1][rank_of(i)])
+			if (((PWay[0][j] | Bit(j)) & BMask[i] & Forward[1][rank_of(i)]) != Empty)
 				BishopForward[1][i] |= Bit(j);
 		}
 	}
@@ -642,7 +642,7 @@ void init_magic()
 		for (u = BMagicMask[i], j = 0; u != Empty; Cut(u), j++)
 			bit_list[j] = lsb(u);
 		for (j = 0; j < Bit(bits); j++) {
-			u = 0;
+			u = Empty;
 			for (k = 0; k < bits; k++)
 				if (Odd(j >> k))
 					Add(u, bit_list[k]);
@@ -674,7 +674,8 @@ void init_magic()
 void gen_kpk()
 {
 	int turn, wp, wk, bk, to, cnt, old_cnt, un;
-	uint64_t bwp, bwk, bbk, u;
+	bitboard_t bwp, bwk;
+	bitboard_t bbk, u;
 	uint8_t Kpk_gen[2][64][64][64];
 
 	memset(Kpk_gen, 0, 2 * 64 * 64 * 64);
@@ -700,18 +701,18 @@ start:
 					bwp = Bit(wp);
 					bwk = Bit(wk);
 					bbk = Bit(bk);
-					if (PAtt[White][wp] & bbk) {
+					if ((PAtt[White][wp] & bbk) != Empty) {
 						if (turn == White)
 							goto set_draw;
-						else if (!(SArea[wk] & bwp))
+						else if ((SArea[wk] & bwp) == Empty)
 							goto set_draw;
 					}
 					un = 0;
 					if (turn == Black) {
 						u = SArea[bk] & (~(SArea[wk] | PAtt[White][wp]));
-						if (!(u))
+						if ((u) == Empty)
 							goto set_draw;
-						for (; u != 0; Cut(u)) {
+						for (; u != Empty; Cut(u)) {
 							to = lsb(u);
 							if (Kpk_gen[turn ^ 1][wp][wk][to] == 1)
 								goto set_draw;
@@ -721,7 +722,7 @@ start:
 						if (!(un))
 							goto set_win;
 					} else {
-						for (u = SArea[wk] & (~(SArea[bk] | bwp)); u != 0; Cut(u)) {
+						for (u = SArea[wk] & (~(SArea[bk] | bwp)); u != Empty; Cut(u)) {
 							to = lsb(u);
 							if (Kpk_gen[turn ^ 1][wp][to][bk] == 2)
 								goto set_win;
@@ -731,9 +732,9 @@ start:
 						to = wp + 8;
 						if (to != wk && to != bk) {
 							if (to >= 56) {
-								if (!(SArea[to] & bbk))
+								if ((SArea[to] & bbk) == Empty)
 									goto set_win;
-								if (SArea[to] & bwk)
+								if ((SArea[to] & bwk) == Empty)
 									goto set_win;
 							} else {
 								if (Kpk_gen[turn ^ 1][to][wk][bk] == 2)

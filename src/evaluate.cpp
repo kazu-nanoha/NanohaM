@@ -1501,7 +1501,7 @@ template <bool me> int krkpx(const GBoard *Board)
 {
 	constexpr bool opp = !me;
 	if ((((SArea[lsb(King(opp))] & Pawn(opp) & Line(me, 1)) != Empty) &
-	     (PWay[opp][NB(me, Pawn(opp))] & King(me)) == Empty) != Empty)
+	     (PWay[opp][NB(me, Pawn(opp))] & King(me)) == Empty) != 0)
 		return 0;
 	return 32;
 }
@@ -1513,16 +1513,16 @@ template <bool me> int krppkrpx(const uint64_t passer, const GBoard *Board)
 			int sq = lsb(passer & Pawn(me));
 			if (PWay[me][sq] & King(opp) & (File[0] | File[1] | File[6] | File[7])) {
 				int opp_king = lsb(King(opp));
-				if (SArea[opp_king] & Pawn(opp)) {
+				if ((SArea[opp_king] & Pawn(opp)) != Empty) {
 					int king_file = file_of(opp_king);
-					if (!((~(File[king_file] | PIsolated[king_file])) & Pawn(me)))
+					if (!(Pawn(me) & (~(File[king_file] | PIsolated[king_file]))))
 						return 1;
 				}
 			}
 		}
 		return 32;
 	}
-	if (!((~(PWay[opp][lsb(King(opp))] | PSupport[me][lsb(King(opp))])) & Pawn(me)))
+	if (!(Pawn(me) & (~(PWay[opp][lsb(King(opp))] | PSupport[me][lsb(King(opp))]))))
 		return 0;
 	return 32;
 }
@@ -1531,7 +1531,7 @@ template <bool me> int krpppkrppx(const bitboard_t passer, const GBoard *Board)
 	constexpr bool opp = !me;
 	if (((passer & Pawn(me)) != Empty) || ((SArea[lsb(Pawn(opp))] | SArea[msb(Pawn(opp))]) & Pawn(opp)) == Empty)
 		return 32;
-	if (((~(PWay[opp][lsb(King(opp))] | PSupport[me][lsb(King(opp))])) & Pawn(me)) == Empty)
+	if ((Pawn(me) & (~(PWay[opp][lsb(King(opp))] | PSupport[me][lsb(King(opp))]))) == Empty)
 		return 0;
 	return 32;
 }
@@ -1540,8 +1540,8 @@ template <bool me> int kbpkbx(const int turn, const GBoard *Board)
 	constexpr bool opp = !me;
 	int sq = lsb(Pawn(me));
 	bitboard_t u;
-	if (((Board->bb[ILight(me)] != 0) && (Board->bb[IDark(opp)] != 0)) ||
-	    ((Board->bb[IDark(me)] != 0) && (Board->bb[ILight(opp)] != 0))) {
+	if (((Board->bb[ILight(me)] != Empty) && (Board->bb[IDark(opp)] != Empty)) ||
+	    ((Board->bb[IDark(me)] != Empty) && (Board->bb[ILight(opp)] != Empty))) {
 		if (CRank(me, sq) <= 4)
 			return 0;
 		if (((PWay[me][sq] & King(opp)) != 0) && CRank(me, sq) <= 5)

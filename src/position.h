@@ -29,7 +29,8 @@ struct GBoard {
 };
 
 struct GData {
-	uint64_t key, eval_key, att[2], patt[2], passer;
+	uint64_t key, eval_key;
+	bitboard_t att[2], patt[2], passer;
 	bitboard_t xray[2], pin[2], threat, mask;
 	uint8_t turn, ply, capture;
 	uint8_t piece;
@@ -79,7 +80,7 @@ public:
 	bitboard_t mask() const { return Current->mask; }
 	void set_mask(bitboard_t bb) { Current->mask = bb; }
 	bitboard_t xray(int me) { return Current->xray[me]; }
-	uint64_t att(int turn) const { return Current->att[turn]; }
+	bitboard_t att(int turn) const { return Current->att[turn]; }
 	uint8_t cur_turn() const { return Current->turn; }
 	uint16_t ply() const { return Current->ply; }
 	int16_t score() const { return Current->score; }
@@ -90,7 +91,7 @@ public:
 	int sel_depth() const
 	{
 		int d;
-		for (d = 1; d < 127 && Data[d].att[0] != 0; d++)
+		for (d = 1; d < 127 && Data[d].att[0] != Empty; d++)
 			;
 		return d - 1;
 	}
@@ -131,7 +132,7 @@ inline bool Position::is_repeat() const
 
 #define Check(me) ((pos.att((me) ^ 1) & King(me)) != 0)
 #define IsIllegal(me, move)                                                                                            \
-	(((pos.xray(opp) & Bit(From(move))) != 0 && !(Bit(To(move)) & FullLine[lsb(King(me))][From(move)])))
+	(((pos.xray(opp) & Bit(From(move))) != Empty && testz_bb(Bit(To(move)), FullLine[lsb(King(me))][From(move)])))
 #define IsRepetition(margin, move)                                                                                     \
 	((margin) > 0 && Current->ply >= 2 && (Current - 1)->move == ((To(move) << 6) | From(move)) &&                     \
 	 !(Square(To(move))) && !((move)&0xF000))

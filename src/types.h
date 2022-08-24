@@ -13,6 +13,10 @@ This software is released under the MIT License, see "LICENSE.txt".
 #include <csetjmp>
 #include <inttypes.h>
 
+extern int lsb(uint64_t x);
+extern int msb(uint64_t x);
+extern int popcnt(uint64_t x);
+
 // bitboard
 #include "bitboard.h"
 
@@ -71,6 +75,7 @@ constexpr uint64_t Bit(int x) { return (1ULL << x); }
 inline void Cut(uint64_t &x) { x &= (x - 1); }
 constexpr bool Multiple(int x) { return ((x) & ((x)-1)) != 0; }
 constexpr bool Single(int x) { return ((x) & ((x)-1)) == 0; }
+
 #define Add(x, b) (x |= Bit(b))
 
 constexpr int From(Move move) { return (((move) >> 6) & 0x3f); }
@@ -164,9 +169,6 @@ enum Square_e {
 constexpr bool IsPromotion(Move move) { return ((move & 0xC000) != 0); }
 constexpr int Promotion(Move move, int side) { return ((side) + (((move)&0xF000) >> 12)); }
 
-#define BishopAttacks(sq, occ) (*(BOffsetPointer[sq] + (((BMagicMask[sq] & (occ)) * BMagic[sq]) >> BShift[sq])))
-#define RookAttacks(sq, occ) (*(ROffsetPointer[sq] + (((RMagicMask[sq] & (occ)) * RMagic[sq]) >> RShift[sq])))
-
 #define QueenAttacks(sq, occ) (BishopAttacks(sq, occ) | RookAttacks(sq, occ))
 
 #define MatWQ 1
@@ -202,15 +204,6 @@ constexpr int MatCode[16] = {0,     0,     MatWP, MatBP, MatWN, MatBN, MatWL, Ma
 #define IQueen(me) (WhiteQueen | (me))
 #define IKing(me) (WhiteKing | (me))
 
-#define ShiftNW(target) (((target) & (~(File[0] | Line[7]))) << 7)
-#define ShiftNE(target) (((target) & (~(File[7] | Line[7]))) << 9)
-#define ShiftSE(target) (((target) & (~(File[7] | Line[0]))) >> 7)
-#define ShiftSW(target) (((target) & (~(File[0] | Line[0]))) >> 9)
-#define ShiftW(me, target) ((me) ? ShiftSW(target) : ShiftNW(target))
-#define ShiftE(me, target) ((me) ? ShiftSE(target) : ShiftNE(target))
-#define ShiftN(target) ((target) << 8)
-#define ShiftS(target) ((target) >> 8)
-#define Shift(me, target) ((me) ? ShiftS(target) : ShiftN(target))
 constexpr int PushW(bool me) { return ((me) ? (-9) : (7)); }
 constexpr int PushE(bool me) { return ((me) ? (-7) : (9)); }
 constexpr int Push(bool me) { return ((me) ? (-8) : (8)); }
@@ -344,9 +337,6 @@ extern const int32_t ROffset[64];
 extern uint64_t *BOffsetPointer[64];
 extern uint64_t *ROffsetPointer[64];
 
-extern int lsb(uint64_t x);
-extern int msb(uint64_t x);
-extern int popcnt(uint64_t x);
 extern int MinF(int x, int y);
 extern int MaxF(int x, int y);
 extern double MinF(double x, double y);

@@ -11,7 +11,7 @@ This software is released under the MIT License, see "LICENSE.txt".
 #define BITBOARD_H_INCLUDED
 
 #include <cstdint>
-#include <x86intrin.h>
+#include <intrin.h>
 
 #if defined(SHOGI)
 struct alignas(16) bitboard_t;
@@ -64,8 +64,11 @@ struct alignas(16) bitboard_t {
 		return _mm_testz_si128(a.xmm, a.xmm);
 	}
 };
+
+inline bool testz_bb(const bitboard_t &a, const bitboard_t &b) { return _mm_testz_si128(a.xmm, b.xmm); }
 #else
 using bitboard_t = uint64_t;
+inline bool testz_bb(const bitboard_t &a, const bitboard_t &b) { return (a & b) == 0; }
 #endif
 
 #if defined(SHOGI)
@@ -148,6 +151,13 @@ extern bitboard_t Between[64][64];
 extern bitboard_t FullLine[64][64];
 
 #if defined(SHOGI)
+inline int popcnt(const bitboard_t &bb) { return popcnt(bb.u64[0]) + popcnt(bb.u64[1]); }
+
+inline bool Multiple(const bitboard_t &bb)
+{
+	int n = popcnt(bb);
+	return n > 1;
+}
 inline void Cut(bitboard_t &bb)
 {
 	if (bb.u64[0] != 0)
@@ -163,5 +173,29 @@ constexpr int msb(const bitboard_t bb)
 {
 	return (bb.u64[1] != 0) ? 64 + (63 ^ __builtin_clzll(bb.u64[1])) : (63 ^ __builtin_clzll(bb.u64[0]));
 }
+bitboard_t BishopAttacks(int sq, const bitboard_t &occ);
+bitboard_t RookAttacks(int sq, const bitboard_t &occ);
+bitboard_t ShiftNW(const bitboard_t &target);
+bitboard_t ShiftNE(const bitboard_t &target);
+bitboard_t ShiftSE(const bitboard_t &target);
+bitboard_t ShiftSW(const bitboard_t &target);
+bitboard_t ShiftW(int me, const bitboard_t &target) { return ((me) ? ShiftSW(target) : ShiftNW(target)); }
+
+bitboard_t ShiftE(int me, const bitboard_t &target) { return ((me) ? ShiftSE(target) : ShiftNE(target)); }
+bitboard_t ShiftN(bitboard_t &target);
+bitboard_t ShiftS(bitboard_t &target);
+bitboard_t Shift(int me, bitboard_t &target) { return ((me) ? ShiftS(target) : ShiftN(target)); }
+#else
+#define BishopAttacks(sq, occ) (*(BOffsetPointer[sq] + (((BMagicMask[sq] & (occ)) * BMagic[sq]) >> BShift[sq])))
+#define RookAttacks(sq, occ) (*(ROffsetPointer[sq] + (((RMagicMask[sq] & (occ)) * RMagic[sq]) >> RShift[sq])))
+#define ShiftNW(target) (((target) & (~(File[0] | Line[7]))) << 7)
+#define ShiftNE(target) (((target) & (~(File[7] | Line[7]))) << 9)
+#define ShiftSE(target) (((target) & (~(File[7] | Line[0]))) >> 7)
+#define ShiftSW(target) (((target) & (~(File[0] | Line[0]))) >> 9)
+#define ShiftW(me, target) ((me) ? ShiftSW(target) : ShiftNW(target))
+#define ShiftE(me, target) ((me) ? ShiftSE(target) : ShiftNE(target))
+#define ShiftN(target) ((target) << 8)
+#define ShiftS(target) ((target) >> 8)
+#define Shift(me, target) ((me) ? ShiftS(target) : ShiftN(target))
 #endif
 #endif // !defined(BITBOARD)
