@@ -52,10 +52,10 @@ This software is released under the MIT License, see "LICENSE.txt".
 	}
 
 #define MvvLvaPromotion (MvvLva[WhiteQueen][BlackQueen])
-#define MvvLvaPromotionKnight (MvvLva[WhiteKnight][BlackKnight])
+///#define MvvLvaPromotionKnight (MvvLva[WhiteKnight][BlackKnight])
 #define MvvLvaPromotionCap(capture)                                                                                    \
 	(MvvLva[((capture) < WhiteRook) ? WhiteRook : ((capture) >= WhiteQueen ? WhiteKing : WhiteKnight)][BlackQueen])
-#define MvvLvaPromotionKnightCap(capture) (MvvLva[WhiteKing][capture])
+///#define MvvLvaPromotionKnightCap(capture) (MvvLva[WhiteKing][capture])
 #define MvvLvaXray (MvvLva[WhiteQueen][WhitePawn])
 #define MvvLvaXrayCap(capture) (MvvLva[WhiteKing][capture])
 #define RefOneScore ((0xFF << 16) | (3 << 24))
@@ -387,13 +387,13 @@ template <bool me> int *MoveList::gen_evasions(Position &pos)
 	for (u = Knight(me); u != Empty; Cut(u)) {
 		for (esc = NAtt[lsb(u)] & att; esc != Empty; esc ^= b) {
 			b = Bit(lsb(esc));
-			if (b & pos.mask()) {
+			if (!testz_bb(b, pos.mask())) {
 				AddCaptureP(IKnight(me), lsb(u), lsb(esc), 0)
 			}
 		}
 	}
 	for (u = Bishop(me); u != Empty; Cut(u)) {
-		for (esc = BishopAttacks(lsb(u), PieceAll) & att; esc != 0; esc ^= b) {
+		for (esc = BishopAttacks(lsb(u), PieceAll) & att; esc != Empty; esc ^= b) {
 			b = Bit(lsb(esc));
 			if ((b & pos.mask()) != Empty) {
 				AddCapture(lsb(u), lsb(esc), 0)
@@ -450,7 +450,7 @@ template <bool me> int *MoveList::gen_quiet_moves(Position &pos, int *list)
 	free = ~occ;
 	for (v = Shift(me, Pawn(me)) & free & (~Line(me, 7)); v != Empty; Cut(v)) {
 		to = lsb(v);
-		if ((Bit(to) & Line(me, 2)) != 0 && !(Square(to + Push(me))))
+		if ((Bit(to) & Line(me, 2)) != Empty && !(Square(to + Push(me))))
 			AddHistoryP(IPawn(me), to - Push(me), to + Push(me), 0) AddHistoryP(IPawn(me), to - Push(me), to, 0)
 	}
 	for (u = Knight(me); u != Empty; Cut(u)) {
@@ -489,11 +489,13 @@ template <bool me> int *MoveList::gen_checks(Position &pos)
 		from = lsb(u);
 		target = clear & (~FullLine[king][from]);
 		if (Square(from) == IPawn(me)) {
-			if (!(Bit(from + Push(me)) & Line(me, 7))) {
-				if ((Bit(from + Push(me)) & target) != Empty && !(Square(from + Push(me))))
-					AddMove(from, from + Push(me), 0, MvvLvaXray) for (v = PAtt[me][from] & target & Piece(opp); v != 0;
-					                                                   Cut(v))
-					    AddMove(from, lsb(v), 0, MvvLvaXrayCap(Square(lsb(v))))
+			if (testz_bb(Bit(from + Push(me)), Line(me, 7))) {
+				if ((Bit(from + Push(me)) & target) != Empty && !(Square(from + Push(me)))) {
+					AddMove(from, from + Push(me), 0, MvvLvaXray);
+					for (v = PAtt[me][from] & target & Piece(opp); v != Empty; Cut(v)) {
+						AddMove(from, lsb(v), 0, MvvLvaXrayCap(Square(lsb(v))))
+					}
+				}
 			}
 		} else {
 			if (Square(from) < WhiteLight)
@@ -506,33 +508,44 @@ template <bool me> int *MoveList::gen_checks(Position &pos)
 				v = QueenAttacks(from, PieceAll) & target;
 			else
 				v = SArea[from] & target & (~pos.att(opp));
-			for (; v != 0; Cut(v))
+			for (; v != Empty; Cut(v)) {
 				AddMove(from, lsb(v), 0, MvvLvaXrayCap(Square(lsb(v))))
+			}
 		}
 	}
 	xray = ~(pos.xray(me) & BB(me));
-	for (u = Knight(me) & NArea[king] & xray; u != Empty; Cut(u))
-		for (v = NAtt[king] & NAtt[lsb(u)] & clear; v != Empty; Cut(v))
-			AddCaptureP(IKnight(me), lsb(u), lsb(v), 0) for (u = DArea[king] & Pawn(me) & (~Line(me, 6)) & xray;
-			                                                 u != Empty; Cut(u))
-			{
-				from = lsb(u);
-				for (v = PAtt[me][from] & PAtt[opp][king] & clear & Piece(opp); v != Empty; Cut(v))
-					AddCaptureP(IPawn(me), from, lsb(v),
-					            0) if (!(Square(from + Push(me))) && (Bit(from + Push(me)) & PAtt[opp][king]) != Empty)
-					    AddMove(from, from + Push(me), 0, 0)
+	for (u = Knight(me) & NArea[king] & xray; u != Empty; Cut(u)) {
+		for (v = NAtt[king] & NAtt[lsb(u)] & clear; v != Empty; Cut(v)) {
+			AddCaptureP(IKnight(me), lsb(u), lsb(v), 0)
+		}
+	}
+	for (u = DArea[king] & Pawn(me) & (~Line(me, 6)) & xray; u != Empty; Cut(u)) {
+		from = lsb(u);
+		for (v = PAtt[me][from] & PAtt[opp][king] & clear & Piece(opp); v != Empty; Cut(v)) {
+			AddCaptureP(IPawn(me), from, lsb(v), 0);
+			if (!(Square(from + Push(me))) && (Bit(from + Push(me)) & PAtt[opp][king]) != Empty) {
+				AddMove(from, from + Push(me), 0, 0)
 			}
+		}
+	}
 	b_target = BishopAttacks(king, PieceAll) & clear;
 	r_target = RookAttacks(king, PieceAll) & clear;
-	for (u = (Odd(king ^ rank_of(king)) ? BB(WhiteLight | me) : BB(WhiteDark | me)) & xray; u != 0; Cut(u))
-		for (v = BishopAttacks(lsb(u), PieceAll) & b_target; v != Empty; Cut(v))
-			AddCapture(lsb(u), lsb(v), 0) for (u = Rook(me) & xray; u != Empty;
-			                                   Cut(u)) for (v = RookAttacks(lsb(u), PieceAll) & r_target; v != 0;
-			                                                Cut(v))
-			    AddCaptureP(IRook(me), lsb(u), lsb(v),
-			                0) for (u = Queen(me) & xray; u != 0;
-			                        Cut(u)) for (v = QueenAttacks(lsb(u), PieceAll) & (b_target | r_target); v != 0;
-			                                     Cut(v)) AddCaptureP(IQueen(me), lsb(u), lsb(v), 0) *list = 0;
+	for (u = (Odd(king ^ rank_of(king)) ? BB(WhiteLight | me) : BB(WhiteDark | me)) & xray; u != Empty; Cut(u)) {
+		for (v = BishopAttacks(lsb(u), PieceAll) & b_target; v != Empty; Cut(v)) {
+			AddCapture(lsb(u), lsb(v), 0)
+		}
+	}
+	for (u = Rook(me) & xray; u != Empty; Cut(u)) {
+		for (v = RookAttacks(lsb(u), PieceAll) & r_target; v != Empty; Cut(v)) {
+			AddCaptureP(IRook(me), lsb(u), lsb(v), 0)
+		}
+	}
+	for (u = Queen(me) & xray; u != Empty; Cut(u)) {
+		for (v = QueenAttacks(lsb(u), PieceAll) & (b_target | r_target); v != Empty; Cut(v)) {
+			AddCaptureP(IQueen(me), lsb(u), lsb(v), 0);
+			*list = 0;
+		}
+	}
 	return list;
 }
 
@@ -548,22 +561,34 @@ template <bool me> int *MoveList::gen_delta_moves(Position &pos)
 	free = ~occ;
 	for (v = Shift(me, Pawn(me)) & free & (~Line(me, 7)); v != Empty; Cut(v)) {
 		to = lsb(v);
-		if ((Bit(to) & Line(me, 2)) != 0 && !(Square(to + Push(me))))
+		if ((Bit(to) & Line(me, 2)) != Empty && !(Square(to + Push(me))))
 			AddCDeltaP(IPawn(me), to - Push(me), to + Push(me), 0) AddCDeltaP(IPawn(me), to - Push(me), to, 0)
 	}
-	for (u = Knight(me); u != 0; Cut(u))
-		for (v = free & NAtt[lsb(u)]; v != Empty; Cut(v))
-			AddCDeltaP(IKnight(me), lsb(u), lsb(v), 0) for (u = Bishop(me); u != Empty;
-			                                                Cut(u)) for (v = free & BishopAttacks(lsb(u), occ); v != 0;
-			                                                             Cut(v))
-			    AddCDelta(lsb(u), lsb(v)) for (u = Rook(me); u != Empty;
-			                                   Cut(u)) for (v = free & RookAttacks(lsb(u), occ); v != 0; Cut(v))
-			        AddCDeltaP(IRook(me), lsb(u), lsb(v), 0) for (u = Queen(me); u != Empty;
-			                                                      Cut(u)) for (v = free & QueenAttacks(lsb(u), occ);
-			                                                                   v != Empty; Cut(v))
-			            AddCDeltaP(IQueen(me), lsb(u), lsb(v),
-			                       0) for (v = SArea[lsb(King(me))] & free & (~pos.att(opp)); v != Empty; Cut(v))
-			                AddCDeltaP(IKing(me), lsb(King(me)), lsb(v), 0) *list = 0;
+	for (u = Knight(me); u != Empty; Cut(u)) {
+		for (v = free & NAtt[lsb(u)]; v != Empty; Cut(v)) {
+			AddCDeltaP(IKnight(me), lsb(u), lsb(v), 0)
+		}
+	}
+	for (u = Bishop(me); u != Empty; Cut(u)) {
+		for (v = free & BishopAttacks(lsb(u), occ); v != Empty; Cut(v)) {
+			AddCDelta(lsb(u), lsb(v))
+		}
+	}
+	for (u = Rook(me); u != Empty; Cut(u)) {
+		for (v = free & RookAttacks(lsb(u), occ); v != Empty; Cut(v)) {
+			AddCDeltaP(IRook(me), lsb(u), lsb(v), 0)
+		}
+	}
+	for (u = Queen(me); u != Empty; Cut(u)) {
+		for (v = free & QueenAttacks(lsb(u), occ); v != Empty; Cut(v)) {
+			AddCDeltaP(IQueen(me), lsb(u), lsb(v), 0)
+		}
+	}
+	for (v = SArea[lsb(King(me))] & free & (~pos.att(opp)); v != Empty; Cut(v)) {
+		AddCDeltaP(IKing(me), lsb(King(me)), lsb(v), 0);
+		*list = 0;
+	}
+
 	return list;
 }
 

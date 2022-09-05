@@ -6,10 +6,6 @@ bitboard_t Forward[2][8];
 bitboard_t West[8];
 bitboard_t East[8];
 bitboard_t PIsolated[8];
-bitboard_t HLine[64];
-bitboard_t VLine[64];
-bitboard_t NDiag[64];
-bitboard_t SDiag[64];
 bitboard_t RMask[64];
 bitboard_t BMask[64];
 bitboard_t QMask[64];
@@ -26,6 +22,12 @@ bitboard_t PWay[2][64];
 bitboard_t PSupport[2][64];
 bitboard_t Between[64][64];
 bitboard_t FullLine[64][64];
+
+NotBB::operator bitboard_t() const
+{
+	bitboard_t a = {.xmm = _mm_xor_si128(bb.xmm, Filled.xmm)};
+	return a;
+}
 
 #if defined(BBTEST)
 #include <cstdio>

@@ -11,11 +11,12 @@ This software is released under the MIT License, see "LICENSE.txt".
 #define TYPES_H_INCLUDED
 
 #include <csetjmp>
+#include <intrin.h>
 #include <inttypes.h>
 
 extern int lsb(uint64_t x);
 extern int msb(uint64_t x);
-extern int popcnt(uint64_t x);
+inline int popcnt64(const uint64_t x) { return _mm_popcnt_u64(x); }
 
 // bitboard
 #include "bitboard.h"

@@ -1328,7 +1328,7 @@ void init_eval()
 template <bool me> int krbkrx(const GBoard *Board)
 {
 	constexpr bool opp = !me;
-	if (King(opp) & Interior)
+	if (!testz_bb(King(opp), Interior))
 		return 1;
 	return 16;
 }
@@ -1408,6 +1408,7 @@ template <bool me> int krpkrx(const int turn, const uint64_t att[], const GBoard
 		}
 	}
 
+#if !defined(SHOGI)
 	if ((PWay[me][sq] & King(opp)) != Empty) {
 		if ((Pawn(me) & (File[0] | File[7])) != Empty)
 			mul = std::min(mul, add_mat << 3);
@@ -1432,11 +1433,12 @@ template <bool me> int krpkrx(const int turn, const uint64_t att[], const GBoard
 			mul = std::min(mul, add_mat << 3);
 	}
 
-	if (SArea[o_king] & PWay[me][sq] & Line(me, 7)) {
+	if (!testz_bb(SArea[o_king] & PWay[me][sq], Line(me, 7))) {
 		if (rrank <= 4 && CRank(me, m_king) <= 4 && CRank(me, o_rook) == 5)
 			mul = std::min(mul, add_mat << 3);
 		if (rrank == 5 && CRank(me, o_rook) <= 1 && turn != me ||
-		    (!(SArea[m_king] & PAtt[me][sq] & (~SArea[o_king])) && (AtCheck(me) || Dist(m_king, sq) >= 2)))
+		    ((SArea[m_king] & PAtt[me][sq] & (~SArea[o_king]) != Empty) &&
+		     (AtCheck(me) != Empty || Dist(m_king, sq) >= 2)))
 			mul = std::min(mul, add_mat << 3);
 	}
 
@@ -1447,6 +1449,7 @@ template <bool me> int krpkrx(const int turn, const uint64_t att[], const GBoard
 		         std::abs(file_of(sq) - file_of(o_king)) <= 2 && file_of(sq) != file_of(o_king))
 			mul = std::min(mul, add_mat << 3);
 	}
+#endif // !defined(SHOGI)
 
 	if (std::abs(file_of(sq) - file_of(o_king)) <= 1 && std::abs(file_of(sq) - file_of(o_rook)) <= 1 &&
 	    CRank(me, o_rook) > rrank && CRank(me, o_king) > rrank)
@@ -1505,24 +1508,26 @@ template <bool me> int krkpx(const GBoard *Board)
 		return 0;
 	return 32;
 }
-template <bool me> int krppkrpx(const uint64_t passer, const GBoard *Board)
+template <bool me> int krppkrpx(const bitboard_t passer, const GBoard *Board)
 {
 	constexpr bool opp = !me;
-	if (passer & Pawn(me)) {
+	if (!testz_bb(passer, Pawn(me))) {
+#if !defined(SHOGI)
 		if (Single(passer & Pawn(me))) {
 			int sq = lsb(passer & Pawn(me));
 			if (PWay[me][sq] & King(opp) & (File[0] | File[1] | File[6] | File[7])) {
 				int opp_king = lsb(King(opp));
 				if ((SArea[opp_king] & Pawn(opp)) != Empty) {
 					int king_file = file_of(opp_king);
-					if (!(Pawn(me) & (~(File[king_file] | PIsolated[king_file]))))
+					if ((Pawn(me) & (~(File[king_file] | PIsolated[king_file]))) == Empty)
 						return 1;
 				}
 			}
 		}
+#endif // !defined(SHOGI)
 		return 32;
 	}
-	if (!(Pawn(me) & (~(PWay[opp][lsb(King(opp))] | PSupport[me][lsb(King(opp))]))))
+	if ((Pawn(me) & (~(PWay[opp][lsb(King(opp))] | PSupport[me][lsb(King(opp))]))) == Empty)
 		return 0;
 	return 32;
 }
@@ -1537,6 +1542,7 @@ template <bool me> int krpppkrppx(const bitboard_t passer, const GBoard *Board)
 }
 template <bool me> int kbpkbx(const int turn, const GBoard *Board)
 {
+#if !defined(SHOGI)
 	constexpr bool opp = !me;
 	int sq = lsb(Pawn(me));
 	bitboard_t u;
@@ -1555,10 +1561,12 @@ template <bool me> int kbpkbx(const int turn, const GBoard *Board)
 	} else if (((PWay[me][sq] & King(opp)) != Empty) &&
 	           ((King(opp) & LightArea) != Empty) != ((Bishop(me) & LightArea) != Empty))
 		return 0;
+#endif // !defined(SHOGI)
 	return 32;
 }
 template <bool me> int kbpknx(const int turn, const GBoard *Board)
 {
+#if !defined(SHOGI)
 	constexpr bool opp = !me;
 	bitboard_t u;
 	if (((PWay[me][lsb(Pawn(me))] & King(opp)) != Empty) &&
@@ -1568,10 +1576,12 @@ template <bool me> int kbpknx(const int turn, const GBoard *Board)
 		for (u = Knight(opp); u != Empty; Cut(u))
 			if ((NAtt[lsb(u)] & Pawn(me)) != Empty)
 				return 0;
+#endif // !defined(SHOGI)
 	return 32;
 }
 template <bool me> int kbppkbx(const GBoard *Board)
 {
+#if !defined(SHOGI)
 	constexpr bool opp = !me;
 	int sq1 = NB(me, Pawn(me));
 	int sq2 = NB(opp, Pawn(me));
@@ -1592,28 +1602,31 @@ template <bool me> int kbppkbx(const GBoard *Board)
 					return 0;
 		}
 	}
+#endif // !defined(SHOGI)
 	return 32;
 }
 template <bool me> int krppkrx(const GBoard *Board)
 {
+#if !defined(SHOGI)
 	constexpr bool opp = !me;
 	int sq1 = NB(me, Pawn(me));
 	int sq2 = NB(opp, Pawn(me));
 
-	if ((Piece(opp) ^ King(opp) ^ Rook(opp)) & Forward[me][rank_of(sq1 - Push(me))])
+	if (!testz_bb((Piece(opp) ^ King(opp) ^ Rook(opp)), Forward[me][rank_of(sq1 - Push(me))]))
 		return 32;
 	if (file_of(sq1) == file_of(sq2)) {
-		if ((PWay[me][sq2] & King(opp)))
+		if (!testz_bb(PWay[me][sq2], King(opp)))
 			return 16;
 		return 32;
 	}
-	if (((PIsolated[file_of(sq2)] & Pawn(me)) != 0) && (((File[0] | File[7]) & Pawn(me)) != 0) &&
-	    ((King(opp) & Shift(me, Pawn(me))) != 0)) {
-		if (CRank(me, sq2) == 5 && CRank(me, sq1) == 4 && ((Rook(opp) & (Line(me, 5) | Line(me, 6))) != 0))
+	if (!testz_bb((PIsolated[file_of(sq2)], Pawn(me))) && !testz_bb(((File[0] | File[7]), Pawn(me))) &&
+	    (!testz_bb(King(opp), Shift(me, Pawn(me))))) {
+		if (CRank(me, sq2) == 5 && CRank(me, sq1) == 4 && (!testz_bb(Rook(opp), (Line(me, 5) | Line(me, 6)))))
 			return 10;
 		else if (CRank(me, sq2) < 5)
 			return 16;
 	}
+#endif // !defined(SHOGI)
 	return 32;
 }
 
@@ -1629,6 +1642,7 @@ struct GEvalInfo {
 
 template <bool me, bool HPopCnt> void Position::eval_queens(GEvalInfo &EI)
 {
+#if !defined(SHOGI)
 	constexpr bool opp = !me;
 	uint64_t u, b;
 	for (u = Queen(me); u != 0; u ^= b) {
@@ -1673,12 +1687,14 @@ template <bool me, bool HPopCnt> void Position::eval_queens(GEvalInfo &EI)
 		if (att & PVarC(EI, area, me))
 			IncV(EI.score, Ca(KingDefence, KingDefQueen));
 	}
+#endif // !defined(SHOGI)
 }
 template <bool me, bool HPopCnt> void Position::eval_rooks(GEvalInfo &EI)
 {
+#if !defined(SHOGI)
 	constexpr bool opp = !me;
-	uint64_t u, b;
-	for (u = Rook(me); u != 0; u ^= b) {
+	bitboard_t u, b;
+	for (u = Rook(me); u != Empty; u ^= b) {
 		int sq = lsb(u);
 		b = Bit(sq);
 		uint64_t att = RookAttacks(sq, EI.occ);
@@ -1754,9 +1770,11 @@ template <bool me, bool HPopCnt> void Position::eval_rooks(GEvalInfo &EI)
 				IncV(EI.score, Ca(RookSpecial, Rook7thDoubled));
 		}
 	}
+#endif // !defined(SHOGI)
 }
 template <bool me, bool HPopCnt> void Position::eval_bishops(GEvalInfo &EI)
 {
+#if !defined(SHOGI)
 	constexpr bool opp = !me;
 	uint64_t u, b;
 	for (u = Bishop(me); u != 0; u ^= b) {
@@ -1823,9 +1841,11 @@ template <bool me, bool HPopCnt> void Position::eval_bishops(GEvalInfo &EI)
 			DecV(EI.score, Ca(BishopSpecial, BishopPawnBlock) * popcount<HPopCnt>(v));
 		}
 	}
+#endif // !defined(SHOGI)
 }
 template <bool me, bool HPopCnt> void Position::eval_knights(GEvalInfo &EI)
 {
+#if !defined(SHOGI)
 	constexpr bool opp = !me;
 	uint64_t u, b;
 	for (u = Knight(me); u != 0; u ^= b) {
@@ -1854,9 +1874,11 @@ template <bool me, bool HPopCnt> void Position::eval_knights(GEvalInfo &EI)
 			}
 		}
 	}
+#endif // !defined(SHOGI)
 }
 template <bool me, bool HPopCnt> void Position::eval_king(GEvalInfo &EI)
 {
+#if !defined(SHOGI)
 	constexpr bool opp = !me;
 	int cnt = Opening(PVarC(EI, king_att, me));
 	int score = Endgame(PVarC(EI, king_att, me));
@@ -1870,9 +1892,11 @@ template <bool me, bool HPopCnt> void Position::eval_king(GEvalInfo &EI)
 	if (!Queen(me))
 		adjusted /= 2;
 	IncV(EI.score, adjusted);
+#endif // !defined(SHOGI)
 }
 template <bool me, bool HPopCnt> void Position::eval_pieces(GEvalInfo &EI)
 {
+#if !defined(SHOGI)
 	constexpr bool opp = !me;
 	Current->threat |= Current->att[opp] & (~Current->att[me]) & Piece(me);
 	if (uint64_t u = Current->threat & Piece(me)) {
@@ -1884,9 +1908,11 @@ template <bool me, bool HPopCnt> void Position::eval_pieces(GEvalInfo &EI)
 				DecV(EI.score, Ca(Tactical, TacticalThreat));
 		}
 	}
+#endif // !defined(SHOGI)
 }
 template <bool me, bool HPopCnt> void Position::eval_endgame(GEvalInfo &EI)
 {
+#if !defined(SHOGI)
 	constexpr bool opp = !me;
 	if ((EI.material->flags & VarC(FlagSingleBishop, me)) && Pawn(me)) {
 		int sq = (Board->bb[ILight(me)]
@@ -2019,9 +2045,11 @@ template <bool me, bool HPopCnt> void Position::eval_endgame(GEvalInfo &EI)
 	    !(SArea[PVarC(EI, king, opp)] & (~(Current->att[me] | Piece(opp)))) && !(Current->patt[opp] & Piece(me)) &&
 	    !(Shift(opp, Pawn(opp)) & (~EI.occ)))
 		EI.mul = 0;
+#endif // !defined(SHOGI)
 }
 template <bool HPopCnt> void Position::eval_unusual_material(const int turn, GEvalInfo &EI)
 {
+#if !defined(SHOGI)
 	int wp, bp, wlight, blight, wr, br, wq, bq;
 	wp = popcount<HPopCnt>(Pawn(White));
 	bp = popcount<HPopCnt>(Pawn(Black));
@@ -2039,10 +2067,12 @@ template <bool HPopCnt> void Position::eval_unusual_material(const int turn, GEv
 	if (turn)
 		Current->score = -Current->score;
 	UpdateDelta
+#endif // !defined(SHOGI)
 }
 
 template <bool HPopCnt> void Position::evaluation()
 {
+#if !defined(SHOGI)
 	GEvalInfo EI;
 	const auto turn = Current->turn;
 
@@ -2132,6 +2162,7 @@ template <bool HPopCnt> void Position::evaluation()
 	if (turn)
 		Current->score = -Current->score;
 	UpdateDelta
+#endif // !defined(SHOGI)
 }
 
 void evaluate(Position &pos)

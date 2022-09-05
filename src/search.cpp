@@ -132,7 +132,7 @@ void pick_pv(Position &pos)
 			move = PVEntry->move16;
 		}
 	evaluate(pos);
-	if (pos.att(pos.cur_turn()) & King(pos.cur_turn() ^ 1))
+	if (!testz_bb(pos.att(pos.cur_turn()), King(pos.cur_turn() ^ 1)))
 		PV[pvp] = 0;
 	else if (move && (pos.cur_turn() ? pos.is_legal<1>(move) : pos.is_legal<0>(move))) {
 		PV[pvp] = move;
@@ -314,10 +314,10 @@ template <bool pv> int extension(const Position &pos, int move, int depth)
 {
 	int ext = 0;
 	if (pv) {
-		if ((pos.Current->passer & Bit(From(move))) && CRank(pos.cur_turn(), From(move)) >= 5 && depth < 16)
+		if (!testz_bb(pos.Current->passer, Bit(From(move))) && CRank(pos.cur_turn(), From(move)) >= 5 && depth < 16)
 			ext = 2;
 	} else {
-		if ((pos.Current->passer & Bit(From(move))) && CRank(pos.cur_turn(), From(move)) >= 5 && depth < 16)
+		if (!testz_bb(pos.Current->passer, Bit(From(move))) && CRank(pos.cur_turn(), From(move)) >= 5 && depth < 16)
 			ext = 1;
 	}
 	return ext;
@@ -362,21 +362,21 @@ template <bool me> void capture_margin(Position &pos, int alpha, int &score)
 {
 	constexpr bool opp = !me;
 	if (pos.score() + 200 < alpha) {
-		if (pos.att(me) & Pawn(opp)) {
+		if (!testz_bb(pos.att(me), Pawn(opp))) {
 			pos.set_mask(pos.mask() ^ Pawn(opp));
 			score = pos.score() + 200;
 		}
 		if (pos.score() + 500 < alpha) {
-			if (pos.att(me) & Minor(opp)) {
+			if (!testz_bb(pos.att(me), Minor(opp))) {
 				pos.set_mask(pos.mask() ^ Minor(opp));
 				score = pos.score() + 500;
 			}
 			if (pos.score() + 700 < alpha) {
-				if (pos.att(me) & Rook(opp)) {
+				if (!testz_bb(pos.att(me), Rook(opp))) {
 					pos.set_mask(pos.mask() ^ Rook(opp));
 					score = pos.score() + 700;
 				}
-				if (pos.score() + 1400 < alpha && (pos.att(me) & Queen(opp))) {
+				if (pos.score() + 1400 < alpha && !testz_bb(pos.att(me), Queen(opp))) {
 					pos.set_mask(pos.mask() ^ Queen(opp));
 					score = pos.score() + 1400;
 				}
@@ -491,7 +491,7 @@ template <bool me, bool pv> int q_search(Position &pos, int alpha, int beta, int
 
 	cnt = 0;
 	if (hash_move != 0) {
-		if (!(Bit(To(hash_move)) & pos.mask()) && !(hash_move & 0xE000) &&
+		if (testz_bb(Bit(To(hash_move)), pos.mask()) && !(hash_move & 0xE000) &&
 		    (depth < -8 || (pos.score() + DeltaM(hash_move) <= alpha && !(pos.is_check<me>(hash_move)))))
 			goto skip_hash_move;
 		if (pos.is_legal<me>(move = hash_move)) {
@@ -510,7 +510,7 @@ template <bool me, bool pv> int q_search(Position &pos, int alpha, int beta, int
 						goto cut;
 				}
 			}
-			if (!(Bit(To(hash_move)) & pos.mask()) && !(hash_move & 0xE000) &&
+			if (testz_bb(Bit(To(hash_move)), pos.mask()) && !(hash_move & 0xE000) &&
 			    (depth < -2 || depth <= -1 && pos.score() + 50 < alpha) && alpha >= beta - 1 && !pv)
 				return alpha;
 		}
@@ -568,9 +568,9 @@ skip_hash_move:
 		}
 	}
 
-	if (cnt || pos.score() + 30 < alpha || (Current->threat & Piece(me)) ||
-	    ((Current->xray[opp] | Current->pin[opp]) & NonPawn(opp)) ||
-	    (Pawn(opp) & Line(me, 1) & Shift(me, ~PieceAll)) != 0)
+	if (cnt || pos.score() + 30 < alpha || !testz_bb(Current->threat, Piece(me)) ||
+	    !testz_bb((Current->xray[opp] | Current->pin[opp]), NonPawn(opp)) ||
+	    !testz_bb(Pawn(opp) & Line(me, 1), Shift(me, ~PieceAll)))
 		goto finish;
 	// ToDo: 6の意味.
 	Current->margin = alpha - pos.score() + 6;
@@ -668,7 +668,7 @@ template <bool me, bool pv> int q_evasion(Position &pos, int alpha, int beta, in
 		Current->ref[0] = RefM(pos.cur_move()).check_ref[0];
 		Current->ref[1] = RefM(pos.cur_move()).check_ref[1];
 		ml.mark_evasions(pos);
-		if (hash_move != 0 && ((Bit(To(hash_move)) & pos.mask()) != 0 || (hash_move & 0xE000) != 0)) {
+		if (hash_move != 0 && !testz_bb(Bit(To(hash_move)), pos.mask()) || (hash_move & 0xE000) != 0) {
 			for (p = ml.moves; *p != 0; p++) {
 				if (((*p) & 0xFFFF) == hash_move) {
 					*p |= 0x7FFF0000;
@@ -766,7 +766,7 @@ template <bool me, bool exclusion> int search(Position &pos, int beta, int depth
 		return search_evasion<me, 0>(pos, beta, depth, flags & (~(FlagHaltCheck | FlagCallEvaluation)));
 
 	if ((value = pos.score() - 90 - (depth << 3) - (std::max(depth - 5, 0) << 5)) >= beta &&
-	    !(Pawn(opp) & Line(me, 1) & Shift(me, ~PieceAll)) && (NonPawnKing(me)) &&
+	    testz_bb(Pawn(opp) & Line(me, 1), Shift(me, ~PieceAll)) && (NonPawnKing(me) != Empty) &&
 	    !(flags & (FlagReturnBestMove | FlagDisableNull)) && depth <= 13)
 		return value;
 	if ((value = pos.score() + 50) < beta && depth <= 3)
@@ -841,7 +841,8 @@ template <bool me, bool exclusion> int search(Position &pos, int beta, int depth
 	}
 	if (depth >= 4 && pos.score() + 3 >= beta && !(flags & (FlagDisableNull | FlagReturnBestMove)) &&
 	    (high_value >= beta || high_depth < depth - 10) &&
-	    (depth < 12 || (hash_value >= beta && hash_depth >= depth - 12)) && beta > -EvalValue && (NonPawnKing(me))) {
+	    (depth < 12 || (hash_value >= beta && hash_depth >= depth - 12)) && beta > -EvalValue &&
+	    (NonPawnKing(me) != Empty)) {
 		new_depth = depth - 8;
 		pos.do_null();
 		value = -search<opp, 0>(pos, 1 - beta, new_depth, FlagHashCheck);
@@ -949,7 +950,7 @@ skip_hash_move:
 					int reduction = msb(cnt);
 					if (move == Current->ref[0] || move == Current->ref[1])
 						reduction = std::max(0, reduction - 1);
-					if (reduction >= 2 && !(Queen(White) | Queen(Black)) && popcnt(NonPawnKingAll) <= 4)
+					if (reduction >= 2 && (Queen(White) | Queen(Black)) == Empty && popcnt(NonPawnKingAll) <= 4)
 						reduction += reduction / 2;
 					if (new_depth - reduction > 3)
 						if (!(pos.see<me>(move, -50)))
@@ -973,7 +974,7 @@ skip_hash_move:
 					continue;
 				}
 			}
-			if (depth <= 9 && (NonPawnKing(me)) && !(pos.see<me>(move, -50)))
+			if (depth <= 9 && NonPawnKing(me) != Empty && !(pos.see<me>(move, -50)))
 				continue;
 		} else {
 			if (ml.stage == r_cap) {
@@ -1161,7 +1162,7 @@ template <bool me, bool exclusion> int search_evasion(Position &pos, int beta, i
 		new_depth = depth - 2 + ext;
 		pos.do_move<me>(move);
 		evaluate(pos);
-		if (pos.att(opp) & King(me)) {
+		if (!testz_bb(pos.att(opp), King(me))) {
 			pos.undo_move<me>(move);
 			cnt--;
 			goto skip_hash_move;
@@ -1210,7 +1211,7 @@ skip_hash_move:
 			}
 			if (depth >= 6 && cnt > 3) {
 				int reduction = msb(cnt);
-				if (reduction >= 2 && !(Queen(White) | Queen(Black)) && popcnt(NonPawnKingAll) <= 4)
+				if (reduction >= 2 && (Queen(White) | Queen(Black)) == Empty && popcnt(NonPawnKingAll) <= 4)
 					reduction += reduction / 2;
 				new_depth = std::max(3, new_depth - reduction);
 			}
@@ -1386,7 +1387,7 @@ skip_iid:
 		pos.do_move<me>(move);
 		if (PrN > 1) {
 			evaluate(pos);
-			if (pos.att(opp) & King(me)) {
+			if (!testz_bb(pos.att(opp), King(me))) {
 				pos.undo_move<me>(move);
 				cnt--;
 				goto skip_hash_move;
@@ -1462,7 +1463,7 @@ skip_hash_move:
 			int reduction = msb(cnt) - 1;
 			if (move == pos.ref(0) || move == pos.ref(1))
 				reduction = std::max(0, reduction - 1);
-			if (reduction >= 2 && !(Queen(White) | Queen(Black)) && popcnt(NonPawnKingAll) <= 4)
+			if (reduction >= 2 && (Queen(White) | Queen(Black)) == Empty && popcnt(NonPawnKingAll) <= 4)
 				reduction += reduction / 2;
 			new_depth = std::max(3, new_depth - reduction);
 		}

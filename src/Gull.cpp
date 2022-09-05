@@ -474,6 +474,10 @@ void init_misc()
 {
 	int i, j, k, l, n;
 	bitboard_t u;
+	bitboard_t HLine[64];
+	bitboard_t VLine[64];
+	bitboard_t NDiag[64];
+	bitboard_t SDiag[64];
 
 	for (i = 0; i < 64; i++) {
 		HLine[i] = VLine[i] = NDiag[i] = SDiag[i] = RMask[i] = BMask[i] = QMask[i] = Empty;
@@ -633,6 +637,7 @@ void init_misc()
 
 void init_magic()
 {
+#if !defined(SHOGI)
 	int i;
 	uint64_t j;
 	int k, index, bits, bit_list[16];
@@ -669,6 +674,7 @@ void init_magic()
 			MagicAttacks[index] = RMagicAttacks(i, u);
 		}
 	}
+#endif // !defined(SHOGI)
 }
 
 void gen_kpk()
@@ -772,7 +778,7 @@ end:
 	for (turn = 0; turn < 2; turn++) {
 		for (wp = 0; wp < 64; wp++) {
 			for (wk = 0; wk < 64; wk++) {
-				Kpk[turn][wp][wk] = 0;
+				Kpk[turn][wp][wk] = Empty;
 				for (bk = 0; bk < 64; bk++) {
 					if (Kpk_gen[turn][wp][wk][bk] == 2)
 						Kpk[turn][wp][wk] |= Bit(bk);
@@ -1029,10 +1035,12 @@ void init()
 	init_misc();
 	if (parent)
 		init_magic();
+#if 0 // ToDo
 	for (int i = 0; i < 64; i++) {
 		BOffsetPointer[i] = MagicAttacks + BOffset[i];
 		ROffsetPointer[i] = MagicAttacks + ROffset[i];
 	}
+#endif
 	gen_kpk();
 	init_pst();
 	init_eval();

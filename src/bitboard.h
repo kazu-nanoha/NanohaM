@@ -64,19 +64,20 @@ struct alignas(16) bitboard_t {
 		return _mm_testz_si128(a.xmm, a.xmm);
 	}
 };
-
 inline bool testz_bb(const bitboard_t &a, const bitboard_t &b) { return _mm_testz_si128(a.xmm, b.xmm); }
 #else
 using bitboard_t = uint64_t;
 inline bool testz_bb(const bitboard_t &a, const bitboard_t &b) { return (a & b) == 0; }
 #endif
 
-#if defined(SHOGI)
-constexpr bitboard_t Empty = {{0ULL, 0ULL}};
-constexpr bitboard_t Filled = {{0x7FFFFFFFFFFFFFFFULL, 0x3FFFFULL}};
+#include "types.h"
 
-constexpr bitboard_t FileA = {{0x00000000000001FFULL, 0x00000}};
-constexpr bitboard_t Line0 = {{0x0040201008040201ULL, 0x00201}};
+#if defined(SHOGI)
+constexpr bitboard_t Empty = {{{0ULL, 0ULL}}};
+constexpr bitboard_t Filled = {{{0x7FFFFFFFFFFFFFFFULL, 0x3FFFFULL}}};
+
+constexpr bitboard_t FileA = {{{0x00000000000001FFULL, 0x00000}}};
+constexpr bitboard_t Line0 = {{{0x0040201008040201ULL, 0x00201}}};
 #else
 constexpr bitboard_t Empty = 0ULL;
 constexpr bitboard_t Filled = ~Empty;
@@ -93,31 +94,31 @@ constexpr bitboard_t Line0 = 0x00000000000000FFULL;
 #if defined(SHOGI)
 // clang-format off
 constexpr bitboard_t File[9] = {
-	{(FileA.u64[0] <<  0), Empty.u64[1]},
-	{(FileA.u64[0] <<  9), Empty.u64[1]},
-	{(FileA.u64[0] << 18), Empty.u64[1]},
-	{(FileA.u64[0] << 27), Empty.u64[1]},
-	{(FileA.u64[0] << 36), Empty.u64[1]},
-	{(FileA.u64[0] << 45), Empty.u64[1]},
-	{(FileA.u64[0] << 54), Empty.u64[1]},
-	{Empty.u64[0], (FileA.u64[0] << 0)},
-	{Empty.u64[0], (FileA.u64[0] << 9)},
+	{{{(FileA.u64[0] <<  0), Empty.u64[1]}}},
+	{{{(FileA.u64[0] <<  9), Empty.u64[1]}}},
+	{{{(FileA.u64[0] << 18), Empty.u64[1]}}},
+	{{{(FileA.u64[0] << 27), Empty.u64[1]}}},
+	{{{(FileA.u64[0] << 36), Empty.u64[1]}}},
+	{{{(FileA.u64[0] << 45), Empty.u64[1]}}},
+	{{{(FileA.u64[0] << 54), Empty.u64[1]}}},
+	{{{Empty.u64[0], (FileA.u64[0] << 0)}}},
+	{{{Empty.u64[0], (FileA.u64[0] << 9)}}},
 };
 constexpr bitboard_t Line[9] = {
-	{(Line0.u64[0] <<  0), (Line0.u64[1] << 0)},
-	{(Line0.u64[0] <<  1), (Line0.u64[1] << 1)},
-	{(Line0.u64[0] <<  2), (Line0.u64[1] << 2)},
-	{(Line0.u64[0] <<  3), (Line0.u64[1] << 3)},
-	{(Line0.u64[0] <<  4), (Line0.u64[1] << 4)},
-	{(Line0.u64[0] <<  5), (Line0.u64[1] << 5)},
-	{(Line0.u64[0] <<  6), (Line0.u64[1] << 6)},
-	{(Line0.u64[0] <<  7), (Line0.u64[1] << 7)},
-	{(Line0.u64[0] <<  8), (Line0.u64[1] << 8)},
+	{{{(Line0.u64[0] <<  0), (Line0.u64[1] << 0)}}},
+	{{{(Line0.u64[0] <<  1), (Line0.u64[1] << 1)}}},
+	{{{(Line0.u64[0] <<  2), (Line0.u64[1] << 2)}}},
+	{{{(Line0.u64[0] <<  3), (Line0.u64[1] << 3)}}},
+	{{{(Line0.u64[0] <<  4), (Line0.u64[1] << 4)}}},
+	{{{(Line0.u64[0] <<  5), (Line0.u64[1] << 5)}}},
+	{{{(Line0.u64[0] <<  6), (Line0.u64[1] << 6)}}},
+	{{{(Line0.u64[0] <<  7), (Line0.u64[1] << 7)}}},
+	{{{(Line0.u64[0] <<  8), (Line0.u64[1] << 8)}}},
 };
 // clang-format on
-constexpr bitboard_t Boundary = {File[0].u64[0] | File[8].u64[0] | Line[0].u64[0] | Line[8].u64[0],
-                                 File[0].u64[1] | File[8].u64[1] | Line[0].u64[1] | Line[8].u64[1]};
-constexpr bitboard_t Interior = {Filled.u64[0] ^ Boundary.u64[0], Filled.u64[1] ^ Boundary.u64[1]};
+constexpr bitboard_t Boundary = {{{File[0].u64[0] | File[8].u64[0] | Line[0].u64[0] | Line[8].u64[0],
+                                   File[0].u64[1] | File[8].u64[1] | Line[0].u64[1] | Line[8].u64[1]}}};
+constexpr bitboard_t Interior = {{{Filled.u64[0] ^ Boundary.u64[0], Filled.u64[1] ^ Boundary.u64[1]}}};
 #else
 constexpr bitboard_t File[8] = {FileA,      FileA << 1, FileA << 2, FileA << 3,
                                 FileA << 4, FileA << 5, FileA << 6, FileA << 7};
@@ -129,16 +130,12 @@ extern bitboard_t Forward[2][8];
 extern bitboard_t West[8];
 extern bitboard_t East[8];
 extern bitboard_t PIsolated[8];
-extern bitboard_t HLine[64];
-extern bitboard_t VLine[64];
-extern bitboard_t NDiag[64];
-extern bitboard_t SDiag[64];
 extern bitboard_t RMask[64];
 extern bitboard_t BMask[64];
 extern bitboard_t QMask[64];
 extern bitboard_t BMagicMask[64];
 extern bitboard_t RMagicMask[64];
-extern bitboard_t NAtt[64];
+extern bitboard_t NAtt[64]; // Knightの利き
 extern bitboard_t SArea[64];
 extern bitboard_t DArea[64];
 extern bitboard_t NArea[64];
@@ -151,7 +148,7 @@ extern bitboard_t Between[64][64];
 extern bitboard_t FullLine[64][64];
 
 #if defined(SHOGI)
-inline int popcnt(const bitboard_t &bb) { return popcnt(bb.u64[0]) + popcnt(bb.u64[1]); }
+inline int popcnt(const bitboard_t &bb) { return popcnt64(bb.u64[0]) + popcnt64(bb.u64[1]); }
 
 inline bool Multiple(const bitboard_t &bb)
 {
@@ -173,18 +170,17 @@ constexpr int msb(const bitboard_t bb)
 {
 	return (bb.u64[1] != 0) ? 64 + (63 ^ __builtin_clzll(bb.u64[1])) : (63 ^ __builtin_clzll(bb.u64[0]));
 }
-bitboard_t BishopAttacks(int sq, const bitboard_t &occ);
-bitboard_t RookAttacks(int sq, const bitboard_t &occ);
-bitboard_t ShiftNW(const bitboard_t &target);
-bitboard_t ShiftNE(const bitboard_t &target);
-bitboard_t ShiftSE(const bitboard_t &target);
-bitboard_t ShiftSW(const bitboard_t &target);
-bitboard_t ShiftW(int me, const bitboard_t &target) { return ((me) ? ShiftSW(target) : ShiftNW(target)); }
-
-bitboard_t ShiftE(int me, const bitboard_t &target) { return ((me) ? ShiftSE(target) : ShiftNE(target)); }
-bitboard_t ShiftN(bitboard_t &target);
-bitboard_t ShiftS(bitboard_t &target);
-bitboard_t Shift(int me, bitboard_t &target) { return ((me) ? ShiftS(target) : ShiftN(target)); }
+extern bitboard_t BishopAttacks(int sq, const bitboard_t &occ);
+extern bitboard_t RookAttacks(int sq, const bitboard_t &occ);
+extern bitboard_t ShiftNW(const bitboard_t &target);
+extern bitboard_t ShiftNE(const bitboard_t &target);
+extern bitboard_t ShiftSE(const bitboard_t &target);
+extern bitboard_t ShiftSW(const bitboard_t &target);
+inline bitboard_t ShiftW(int me, const bitboard_t &target) { return ((me) ? ShiftSW(target) : ShiftNW(target)); }
+inline bitboard_t ShiftE(int me, const bitboard_t &target) { return ((me) ? ShiftSE(target) : ShiftNE(target)); }
+extern bitboard_t ShiftN(const bitboard_t &target);
+extern bitboard_t ShiftS(const bitboard_t &target);
+inline bitboard_t Shift(int me, const bitboard_t &target) { return ((me) ? ShiftS(target) : ShiftN(target)); }
 #else
 #define BishopAttacks(sq, occ) (*(BOffsetPointer[sq] + (((BMagicMask[sq] & (occ)) * BMagic[sq]) >> BShift[sq])))
 #define RookAttacks(sq, occ) (*(ROffsetPointer[sq] + (((RMagicMask[sq] & (occ)) * RMagic[sq]) >> RShift[sq])))
