@@ -22,7 +22,7 @@ This software is released under the MIT License, see "LICENSE.txt".
 #include "position.h"
 #include "search.h"
 #include "thread.h"
-#include "uci.h"
+#include "usi.h"
 
 #define PRG_NAME  "Nanoha"
 #define AUTHOR    "Kazuyuki Kawabata"

@@ -33,7 +33,7 @@
 #include "search.h"
 #include "thread.h"
 #include "types.h"
-#include "uci.h"
+#include "usi.h"
 #include "bbtables.h"
 
 ///#define MP_NPS	// --> search.cpp

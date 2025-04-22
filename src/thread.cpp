@@ -12,7 +12,7 @@ This software is released under the MIT License, see "LICENSE.txt".
 #include "misc.h"
 #include "position.h"	// ToDo: 不要か判断する.
 #include "thread.h"
-#include "uci.h"
+#include "usi.h"
 
 ThreadPool Threads;
 

@@ -20,7 +20,7 @@ This software is released under the MIT License, see "LICENSE.txt".
 #include "search.h"
 #include "thread.h"
 #include "types.h"
-#include "uci.h"
+#include "usi.h"
 #include <Windows.h>
 #include <cstdio>
 

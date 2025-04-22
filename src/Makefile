@@ -9,9 +9,9 @@ CC=clang++
 #CC=g++
 
 TARGET=Nanoha.exe
-SRCS=Gull.cpp TT.cpp bitboard.cpp evaluate.cpp misc.cpp uci.cpp position.cpp genmove.cpp \
+SRCS=Gull.cpp TT.cpp bitboard.cpp evaluate.cpp misc.cpp usi.cpp position.cpp genmove.cpp \
 	search.cpp thread.cpp
-OBJS=Gull.o   TT.o   bitboard.o   evaluate.o   misc.o   uci.o   position.o   genmove.o \
+OBJS=Gull.o   TT.o   bitboard.o   evaluate.o   misc.o   usi.o   position.o   genmove.o \
 	search.o   thread.o
 
 .cpp.o:
