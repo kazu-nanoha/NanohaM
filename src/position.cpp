@@ -37,10 +37,11 @@ void Position::init_search() { clear_forward(); }
 
 template <bool me> void Position::do_move(int move)
 {
+	GData *Next = Current + 1;
 	constexpr bool opp = !me;
 	GEntry *Entry;
+#if 0
 	int from, to, piece, capture;
-	GData *Next;
 	bitboard_t mask_from, mask_to;
 
 	to = To(move);
@@ -136,7 +137,7 @@ non_capture:
 			Next->key ^= PieceKey[piece][to] ^ PieceKey[IPawn(me)][to];
 		}
 	}
-
+#endif
 	Next->turn = opp;
 	Next->key ^= TurnKey;
 	Entry = TT.top(Next->key);

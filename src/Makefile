@@ -17,7 +17,7 @@ OBJS=Gull.o   TT.o   bitboard.o   evaluate.o   misc.o   uci.o   position.o   gen
 .cpp.o:
 	$(CC) -c $(CFLAGS) $<
 
-CFLAGS=-fno-exceptions -fno-rtti -Wno-parentheses -D_WIN32_WINNT=0x0601 -Wall -std=gnu++11 -mavx2 -mbmi2 -mpopcnt #-DSHOGI
+CFLAGS=-fno-exceptions -fno-rtti -Wno-parentheses -D_WIN32_WINNT=0x0601 -Wall -std=gnu++14 -mavx2 -mbmi2 -mpopcnt #-DSHOGI
 STRIP=strip
 
 CFLAGS += -Weffc++ -Wenum-compare -Wfloat-equal -Wint-to-pointer-cast \

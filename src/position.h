@@ -14,6 +14,8 @@ This software is released under the MIT License, see "LICENSE.txt".
 
 #include "bitboard.h"
 #include "types.h"
+#include "bbtables.h"
+
 // Memo: L427
 struct GPosData {
 	uint64_t key;
@@ -101,6 +103,7 @@ public:
 	template <bool me> int see(int move, int margin);
 
 	// evaluate.cpp
+#if 0
 	template <bool me, bool HPopCnt> void eval_queens(GEvalInfo &EI);
 	template <bool me, bool HPopCnt> void eval_rooks(GEvalInfo &EI);
 	template <bool me, bool HPopCnt> void eval_bishops(GEvalInfo &EI);
@@ -109,6 +112,7 @@ public:
 	template <bool me, bool HPopCnt> void eval_pieces(GEvalInfo &EI);
 	template <bool me, bool HPopCnt> void eval_endgame(GEvalInfo &EI);
 	template <bool HPopCnt> void eval_unusual_material(const int turn, GEvalInfo &EI);
+#endif
 	template <bool HPopCnt> void evaluation();
 
 private:

@@ -64,15 +64,6 @@ constexpr int make_sq(int rank, int file)
 #define Dist(x, y) std::max(std::abs(rank_of(x) - rank_of(y)), std::abs(file_of(x) - file_of(y)))
 #define VarC(var, me) ((me) ? (var##_b) : (var##_w))
 #define PVarC(prefix, var, me) ((me) ? (prefix.var##_b) : (prefix.var##_w))
-#if defined(SHOGI)
-constexpr bitboard_t Bit(uint32_t x)
-{
-	bitboard_t a = {.u64[0] = (x < 63) ? 1ULL << x : 0, .u64[1] = (x < 63) ? 0 : 1ULL << (x - 63)};
-	return a;
-}
-#else
-constexpr uint64_t Bit(int x) { return (1ULL << x); }
-#endif
 inline void Cut(uint64_t &x) { x &= (x - 1); }
 constexpr bool Multiple(int x) { return ((x) & ((x)-1)) != 0; }
 constexpr bool Single(int x) { return ((x) & ((x)-1)) == 0; }
@@ -233,6 +224,16 @@ extern int RootList[256];
 
 #define prefetch(a, mode) _mm_prefetch(a, mode)
 
+#if defined(SHOGI)
+constexpr bool valid_rank(int rank) { return (unsigned)rank < 9; }
+constexpr bool valid_file(int file) { return (unsigned)file < 9; }
+constexpr bool valid_sq(int sq) { return (unsigned)sq < 81; }
+#else
+constexpr bool valid_rank(int rank) { return (rank & ~7) == 0; }
+constexpr bool valid_file(int file) { return (file & ~7) == 0; }
+constexpr bool valid_sq(int sq) { return (sq & ~63) == 0; }
+#endif
+
 // Memo: L479
 extern uint64_t TurnKey;
 extern uint64_t PieceKey[16][64];
@@ -299,6 +300,7 @@ extern int PrN, CPUs, parent, Id, ResetHash, NewPrN;
 #define Ca(x, y) Compose(Av(x, 0, 0, ((y)*2)), Av(x, 0, 0, ((y)*2) + 1))
 
 // Memo: L783
+#if 0
 extern int PasserGeneral[8];
 extern int PasserBlocked[8];
 extern int PasserFree[8];
@@ -308,6 +310,7 @@ extern int PasserConnected[8];
 extern int PasserOutside[8];
 extern int PasserCandidate[8];
 extern int PasserClear[8];
+#endif
 
 //
 void move_to_string(int move, char string[]);

@@ -34,6 +34,7 @@
 #include "thread.h"
 #include "types.h"
 #include "uci.h"
+#include "bbtables.h"
 
 ///#define MP_NPS	// --> search.cpp
 /////#undef MP_NPS

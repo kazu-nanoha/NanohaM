@@ -121,16 +121,18 @@ void pick_pv(Position &pos)
 	}
 	move = 0;
 	depth = -256;
-	if (Entry = TT.probe(pos.key()))
+	if ((Entry = TT.probe(pos.key())) != nullptr) {
 		if ((Entry->move16) && Entry->low_depth > depth) {
 			depth = Entry->low_depth;
 			move = Entry->move16;
 		}
-	if (PVEntry = PVHASH.probe(pos.key()))
+	}
+	if ((PVEntry = PVHASH.probe(pos.key())) != nullptr) {
 		if ((PVEntry->move16) && PVEntry->depth > depth) {
 			depth = PVEntry->depth;
 			move = PVEntry->move16;
 		}
+	}
 	evaluate(pos);
 	if (!testz_bb(pos.att(pos.cur_turn()), King(pos.cur_turn() ^ 1)))
 		PV[pvp] = 0;
@@ -511,14 +513,14 @@ template <bool me, bool pv> int q_search(Position &pos, int alpha, int beta, int
 				}
 			}
 			if (testz_bb(Bit(To(hash_move)), pos.mask()) && !(hash_move & 0xE000) &&
-			    (depth < -2 || depth <= -1 && pos.score() + 50 < alpha) && alpha >= beta - 1 && !pv)
+			    (depth < -2 || (depth <= -1 && pos.score() + 50 < alpha)) && alpha >= beta - 1 && !pv)
 				return alpha;
 		}
 	}
 skip_hash_move:
 	ml.gen_captures<me>(pos);
 	ml.cur = ml.moves;
-	while (move = ml.pick_move()) {
+	while ((move = ml.pick_move()) != 0) {
 		if (move == hash_move)
 			continue;
 		if (IsIllegal(me, move))
@@ -546,7 +548,7 @@ skip_hash_move:
 		goto finish;
 	ml.gen_checks<me>(pos);
 	ml.cur = ml.moves;
-	while (move = ml.pick_move()) {
+	while ((move = ml.pick_move()) != 0) {
 		if (move == hash_move)
 			continue;
 		if (IsIllegal(me, move))
@@ -576,7 +578,7 @@ skip_hash_move:
 	Current->margin = alpha - pos.score() + 6;
 	ml.gen_delta_moves<me>(pos);
 	ml.cur = ml.moves;
-	while (move = ml.pick_move()) {
+	while ((move = ml.pick_move()) != 0) {
 		if (move == hash_move)
 			continue;
 		if (IsIllegal(me, move))
@@ -678,7 +680,7 @@ template <bool me, bool pv> int q_evasion(Position &pos, int alpha, int beta, in
 		}
 	}
 	cnt = 0;
-	while (move = ml.pick_move()) {
+	while ((move = ml.pick_move()) != 0) {
 		if (IsIllegal(me, move))
 			continue;
 		cnt++;
@@ -921,7 +923,7 @@ skip_hash_move:
 	///	do_split = sp_init = 0;
 	///	if (depth >= SplitDepth && PrN > 1 && parent && !exclusion) do_split = 1;
 
-	while (move = ml.get_move<me, 0>(pos)) {
+	while ((move = ml.get_move<me, 0>(pos)) != 0) {
 		if (move == hash_move)
 			continue;
 		if (IsIllegal(me, move))
@@ -950,8 +952,8 @@ skip_hash_move:
 					int reduction = msb(cnt);
 					if (move == Current->ref[0] || move == Current->ref[1])
 						reduction = std::max(0, reduction - 1);
-					if (reduction >= 2 && (Queen(White) | Queen(Black)) == Empty && popcnt(NonPawnKingAll) <= 4)
-						reduction += reduction / 2;
+///					if (reduction >= 2 && (Queen(White) | Queen(Black)) == Empty && popcnt(NonPawnKingAll) <= 4)
+///						reduction += reduction / 2;
 					if (new_depth - reduction > 3)
 						if (!(pos.see<me>(move, -50)))
 							reduction += 2;
@@ -1184,7 +1186,7 @@ skip_hash_move:
 	Current->ref[1] = RefM(pos.cur_move()).check_ref[1];
 	ml.mark_evasions(pos);
 	ml.cur = ml.moves;
-	while (move = ml.pick_move()) {
+	while ((move = ml.pick_move()) != 0) {
 		if (move == hash_move)
 			continue;
 		if (IsIllegal(me, move))
@@ -1211,8 +1213,8 @@ skip_hash_move:
 			}
 			if (depth >= 6 && cnt > 3) {
 				int reduction = msb(cnt);
-				if (reduction >= 2 && (Queen(White) | Queen(Black)) == Empty && popcnt(NonPawnKingAll) <= 4)
-					reduction += reduction / 2;
+///				if (reduction >= 2 && (Queen(White) | Queen(Black)) == Empty && popcnt(NonPawnKingAll) <= 4)
+///					reduction += reduction / 2;
 				new_depth = std::max(3, new_depth - reduction);
 			}
 		}
@@ -1269,12 +1271,15 @@ template <bool me, bool root> int pv_search(Position &pos, int alpha, int beta, 
 		SetScore(RootList[0], 2);
 		goto check_hash;
 	}
-	if (depth <= 1)
+	if (depth <= 1) {
 		return q_search<me, 1>(pos, alpha, beta, 1, FlagNeatSearch);
-	if (height - MateValue >= beta)
+	}
+	if (height - MateValue >= beta) {
 		return beta;
-	if (MateValue - height <= alpha)
+	}
+	if (MateValue - height <= alpha) {
 		return alpha;
+	}
 	halt_check;
 
 check_hash:
@@ -1437,7 +1442,7 @@ skip_hash_move:
 
 	///	if (PrN > 1 && !root && parent && depth >= SplitDepthPV) do_split = 1;
 
-	while (move = ml.get_move<me, root>(pos)) {
+	while ((move = ml.get_move<me, root>(pos)) != 0) {
 		if (move == hash_move)
 			continue;
 		if (IsIllegal(me, move))
@@ -1463,8 +1468,8 @@ skip_hash_move:
 			int reduction = msb(cnt) - 1;
 			if (move == pos.ref(0) || move == pos.ref(1))
 				reduction = std::max(0, reduction - 1);
-			if (reduction >= 2 && (Queen(White) | Queen(Black)) == Empty && popcnt(NonPawnKingAll) <= 4)
-				reduction += reduction / 2;
+///			if (reduction >= 2 && (Queen(White) | Queen(Black)) == Empty && popcnt(NonPawnKingAll) <= 4)
+///				reduction += reduction / 2;
 			new_depth = std::max(3, new_depth - reduction);
 		}
 		///		if (do_split && played >= 1) {
@@ -1573,7 +1578,7 @@ template <bool me> void root()
 	ml.gen_root_moves<me>(pos);
 	if (PVN > 1) {
 		memset(MultiPV, 0, 128 * sizeof(int));
-		for (i = 0; MultiPV[i] = RootList[i]; i++)
+		for (i = 0; (MultiPV[i] = RootList[i]) != 0; i++)
 			;
 	}
 	best_move = RootList[0];
@@ -1595,7 +1600,7 @@ template <bool me> void root()
 	memset(CurrentSI, 0, sizeof(GSearchInfo));
 	memset(BaseSI, 0, sizeof(GSearchInfo));
 	Previous = -MateValue;
-	if (PVEntry = PVHASH.probe(pos.key())) {
+	if ((PVEntry = PVHASH.probe(pos.key())) != nullptr) {
 		if (pos.is_legal<me>(PVEntry->move16) && PVEntry->move16 == best_move && PVEntry->depth > hash_depth) {
 			hash_depth = PVEntry->depth;
 			hash_value = PVEntry->value;

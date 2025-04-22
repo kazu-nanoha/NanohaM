@@ -16,20 +16,20 @@ This software is released under the MIT License, see "LICENSE.txt".
 #include <cstdio>
 
 // Memo: L275
-#define FlagUnusualMaterial (1 << 30)
+///#define FlagUnusualMaterial (1 << 30)
 
-#define Square(sq) Board->square[sq]
+///#define Square(sq) Board->square[sq]
 
-#define Compose16(x, y) Compose((x) / 16, (y) / 16)
-#define Compose256(x, y) Compose((x) / 256, (y) / 256)
+///#define Compose16(x, y) Compose((x) / 16, (y) / 16)
+///#define Compose256(x, y) Compose((x) / 256, (y) / 256)
 
 // Memo: L480
 /// uint64_t * MagicAttacks;
 /// GMaterial * Material;
-#define FlagSingleBishop_w (1 << 0)
-#define FlagSingleBishop_b (1 << 1)
-#define FlagCallEvalEndgame_w (1 << 2)
-#define FlagCallEvalEndgame_b (1 << 3)
+///#define FlagSingleBishop_w (1 << 0)
+///#define FlagSingleBishop_b (1 << 1)
+///#define FlagCallEvalEndgame_w (1 << 2)
+///#define FlagCallEvalEndgame_b (1 << 3)
 
 int Pst[16 * 64];
 int MvvLva[16][16]; // [piece][capture]
@@ -40,6 +40,7 @@ int MvvLva[16][16]; // [piece][capture]
 // Memo: L523
 int16_t Delta[16 * 4096];
 
+#if 0
 #define DeltaScore(piece, from, to) Delta[((piece) << 12) | ((from) << 6) | (to)]
 
 #define UpdateDelta                                                                                                    \
@@ -51,6 +52,7 @@ int16_t Delta[16 * 4096];
 		else                                                                                                           \
 			DeltaScore(Current->piece, From(Current->move), To(Current->move))--;                                      \
 	}
+#endif
 
 // Memo: L606
 // EVAL
@@ -77,14 +79,15 @@ const int StormQuad[5] = { // tuner: type=array, var=250, active=0
 const int StormLinear[5] = { // tuner: type=array, var=500, active=0
     83, 156, 438, 321, 12};
 enum { StormHofValue, StormOfValue };
-const int StormHof[2] = { // tuner: type=array, var=20, active=1
-    0, 22};
+///const int StormHof[2] = { // tuner: type=array, var=20, active=1
+///    0, 22};
 int16_t StormBlocked[4];
 int16_t StormShelterAtt[4];
 int16_t StormConnected[4];
 int16_t StormOpen[4];
 int16_t StormFree[4];
 
+#if 0
 // type (7: general, blocked, free, supported, protected, connected, outside, candidate, clear) * phase (2)
 const int PasserQuad[18] = { // tuner: type=array, var=50, active=0
     19, 13, 21, 3, -24, 126, 0, 65, 32, 56, 27, -5, 32, -16, 13, 4, 1, 1};
@@ -98,8 +101,10 @@ const int PasserAttDefLinear[4] = { // tuner: type=array, var=500, active=0
 enum { PasserOnePiece, PasserOpKingControl, PasserOpMinorControl, PasserOpRookBlock };
 const int PasserSpecial[4] = { // tuner: type=array, var=100, active=0
     0, 0, 0, 13};
+#endif
 
 uint8_t LogDist[16];
+#if 0
 int PasserGeneral[8];
 int PasserBlocked[8];
 int PasserFree[8];
@@ -113,8 +118,10 @@ int16_t PasserAtt[8];
 int16_t PasserDef[8];
 int16_t PasserAttLog[8];
 int16_t PasserDefLog[8];
+#endif
 
 // Memo: L797
+#if 0
 enum { IsolatedOpen, IsolatedClosed, IsolatedBlocked, IsolatedDoubledOpen, IsolatedDoubledClosed };
 const int Isolated[10] = { // tuner: type=array, var=10, active=0
     6, 6, 8, 2, -8, 0, -1, 10, 7, 9};
@@ -181,16 +188,17 @@ const int KingRay[6] = { // tuner: type=array, var=20, active=0
 
 const int KingAttackWeight[7] = { // tuner: type=array, var=20, active=0
     17, 14, 22, 45, 48, 64, 64};
-#define KingNAttack Compose(1, Av(KingAttackWeight, 0, 0, 0))
-#define KingBAttack Compose(1, Av(KingAttackWeight, 0, 0, 1))
-#define KingRAttack Compose(1, Av(KingAttackWeight, 0, 0, 2))
-#define KingQAttack Compose(1, Av(KingAttackWeight, 0, 0, 3))
-#define KingAttack Compose(1, 0)
-#define KingAttackSquare Av(KingAttackWeight, 0, 0, 4)
-#define KingNoMoves Av(KingAttackWeight, 0, 0, 5)
-#define KingShelterQuad Av(KingAttackWeight, 0, 0, 6)
+///#define KingNAttack Compose(1, Av(KingAttackWeight, 0, 0, 0))
+///#define KingBAttack Compose(1, Av(KingAttackWeight, 0, 0, 1))
+////#define KingRAttack Compose(1, Av(KingAttackWeight, 0, 0, 2))
+////#define KingQAttack Compose(1, Av(KingAttackWeight, 0, 0, 3))
+///#define KingAttack Compose(1, 0)
+///#define KingAttackSquare Av(KingAttackWeight, 0, 0, 4)
+///#define KingNoMoves Av(KingAttackWeight, 0, 0, 5)
+///#define KingShelterQuad Av(KingAttackWeight, 0, 0, 6)
 
 const int KingAttackScale[16] = {0, 1, 4, 9, 16, 25, 36, 49, 64, 64, 64, 64, 64, 64, 64, 64};
+#endif
 
 #if 0
 // Memo: L1331
@@ -1143,6 +1151,7 @@ void evaluate() {
 // Memo: L1331
 void print_eval()
 {
+#if 0
 	int i, j;
 	FILE *f = fopen("eval.txt", "w");
 	fprintf(f, "Pst\n");
@@ -1254,6 +1263,7 @@ void print_eval()
 	fprintf(f, "\n");
 
 	fclose(f);
+#endif
 }
 
 // Memo: L2420
@@ -1261,7 +1271,7 @@ void init_eval()
 {
 	int i, j, k, index;
 	memset(Mobility, 0, 4 * 32 * sizeof(int));
-	for (i = 0; i < 4; i++)
+	for (i = 0; i < 4; i++) {
 		for (j = 0; j < 32; j++) {
 			index = i * 2;
 			double op = (double)(Av(MobilityLinear, 8, 0, index) * j) +
@@ -1271,8 +1281,9 @@ void init_eval()
 			            log(1.01 + (double)j) * (double)(Av(MobilityLog, 8, 0, index));
 			Mobility[i][j] = Compose((int)(op / 64.0), (int)(eg / 64.0));
 		}
+	}
 
-	for (i = 0; i < 3; i++)
+	for (i = 0; i < 3; i++) {
 		for (j = 7; j >= 0; j--) {
 			Shelter[i][j] = 0;
 			if (j > 1)
@@ -1281,6 +1292,7 @@ void init_eval()
 			if (!j)
 				Shelter[i][j] = Shelter[i][7] + Av(ShelterValue, 0, 0, (i * 5) + 4);
 		}
+	}
 
 	for (i = 0; i < 4; i++) {
 		StormBlocked[i] =
@@ -1293,6 +1305,7 @@ void init_eval()
 		StormFree[i] = ((Sa(StormQuad, StormFreeMul) * i * i) + (Sa(StormLinear, StormFreeMul) * (i + 1))) / 100;
 	}
 
+#if 0
 	for (i = 0; i < 8; i++) {
 		int l = std::max(i - 2, 0);
 		int q = l * l;
@@ -1320,10 +1333,14 @@ void init_eval()
 		PasserAttLog[i] = Av(PasserAttDefQuad, 2, 0, 1) * q + Av(PasserAttDefLinear, 2, 0, 1) * l;
 		PasserDefLog[i] = Av(PasserAttDefQuad, 2, 1, 1) * q + Av(PasserAttDefLinear, 2, 1, 1) * l;
 	}
-	for (i = 0; i < 16; i++)
+#endif
+	for (i = 0; i < 16; i++) {
 		LogDist[i] = (int)(10.0 * log(1.01 + (double)i));
+	}
 }
 
+#if 0
+namespace {
 // Memo: L2687
 template <bool me> int krbkrx(const GBoard *Board)
 {
@@ -1629,6 +1646,8 @@ template <bool me> int krppkrx(const GBoard *Board)
 #endif // !defined(SHOGI)
 	return 32;
 }
+} // namespace
+#endif
 
 struct GEvalInfo {
 	int score, king_w, king_b, mul;
@@ -1638,8 +1657,9 @@ struct GEvalInfo {
 };
 
 // Memo: L862
-#define KingAttack Compose(1, 0)
+///#define KingAttack Compose(1, 0)
 
+#if 0
 template <bool me, bool HPopCnt> void Position::eval_queens(GEvalInfo &EI)
 {
 #if !defined(SHOGI)
@@ -1689,6 +1709,7 @@ template <bool me, bool HPopCnt> void Position::eval_queens(GEvalInfo &EI)
 	}
 #endif // !defined(SHOGI)
 }
+#if 0
 template <bool me, bool HPopCnt> void Position::eval_rooks(GEvalInfo &EI)
 {
 #if !defined(SHOGI)
@@ -1772,6 +1793,7 @@ template <bool me, bool HPopCnt> void Position::eval_rooks(GEvalInfo &EI)
 	}
 #endif // !defined(SHOGI)
 }
+
 template <bool me, bool HPopCnt> void Position::eval_bishops(GEvalInfo &EI)
 {
 #if !defined(SHOGI)
@@ -2047,6 +2069,7 @@ template <bool me, bool HPopCnt> void Position::eval_endgame(GEvalInfo &EI)
 		EI.mul = 0;
 #endif // !defined(SHOGI)
 }
+#endif
 template <bool HPopCnt> void Position::eval_unusual_material(const int turn, GEvalInfo &EI)
 {
 #if !defined(SHOGI)
@@ -2069,7 +2092,9 @@ template <bool HPopCnt> void Position::eval_unusual_material(const int turn, GEv
 	UpdateDelta
 #endif // !defined(SHOGI)
 }
+#endif
 
+#if 0
 template <bool HPopCnt> void Position::evaluation()
 {
 #if !defined(SHOGI)
@@ -2164,9 +2189,12 @@ template <bool HPopCnt> void Position::evaluation()
 	UpdateDelta
 #endif // !defined(SHOGI)
 }
+#endif
 
-void evaluate(Position &pos)
+void evaluate([[maybe_unused]] Position &pos)
 {
-	////	HardwarePopCnt ? evaluation<1>() : evaluation<0>();
-	pos.evaluation<1>();
+	const auto turn = Current->turn;
+	Current->score = 0;
+	if (turn)
+		Current->score = -Current->score;
 }
