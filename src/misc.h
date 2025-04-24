@@ -14,7 +14,7 @@ This software is released under the MIT License, see "LICENSE.txt"
 #include <iostream>
 
 // assert()だとcygwinのgdbでは意図したところで止まってくれないので、例外を発生させて強制的に停止させる.
-#define ASSERT(x)   if (!(x)) do { std::cout << "\nError:" << __FILE__ << ":" << __LINE__ << ":" #x << std::endl; *(int*)0 = 0; } while (0)
+#define ASSERT(x)   if (!(x)) do { std::cout << "\nError:" << __FILE__ << ":" << __LINE__ << ":" #x << std::endl; *(volatile int*)0 = 0; } while (0)
 
 enum IOSTREAM_LOCK { IO_LOCK, IO_UNLOCK };
 std::ostream& operator<<(std::ostream&, IOSTREAM_LOCK);

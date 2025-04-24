@@ -229,17 +229,17 @@ template <bool me> void MoveList::gen_root_moves(Position &pos)
 {
 	constexpr bool opp = !me;
 	int i, *p, killer, depth = -256, move;
-	GEntry *Entry;
-	GPVEntry *PVEntry;
 
 	killer = 0;
-	if (Entry = TT.probe(pos.key())) {
+	GEntry *Entry = TT.probe(pos.key());
+	if (Entry) {
 		if (Entry->move16 != 0 && Entry->low_depth > depth) {
 			depth = Entry->low_depth;
 			killer = Entry->move16;
 		}
 	}
-	if (PVEntry = PVHASH.probe(pos.key())) {
+	GPVEntry *PVEntry = PVHASH.probe(pos.key());
+	if (PVEntry) {
 		if (PVEntry->depth > depth && PVEntry->move16 != 0) {
 			depth = PVEntry->depth;
 			killer = PVEntry->move16;
@@ -258,7 +258,7 @@ template <bool me> void MoveList::gen_root_moves(Position &pos)
 	p = RootList;
 	cur = moves;
 	moves[0] = 0;
-	while (move = get_move<me, 0>(pos)) {
+	while ((move = get_move<me, 0>(pos)) != 0) {
 		if (IsIllegal(me, move))
 			continue;
 		if (p > RootList && move == killer)
