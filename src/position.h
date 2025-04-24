@@ -103,16 +103,6 @@ public:
 	template <bool me> int see(int move, int margin);
 
 	// evaluate.cpp
-#if 0
-	template <bool me, bool HPopCnt> void eval_queens(GEvalInfo &EI);
-	template <bool me, bool HPopCnt> void eval_rooks(GEvalInfo &EI);
-	template <bool me, bool HPopCnt> void eval_bishops(GEvalInfo &EI);
-	template <bool me, bool HPopCnt> void eval_knights(GEvalInfo &EI);
-	template <bool me, bool HPopCnt> void eval_king(GEvalInfo &EI);
-	template <bool me, bool HPopCnt> void eval_pieces(GEvalInfo &EI);
-	template <bool me, bool HPopCnt> void eval_endgame(GEvalInfo &EI);
-	template <bool HPopCnt> void eval_unusual_material(const int turn, GEvalInfo &EI);
-#endif
 	template <bool HPopCnt> void evaluation();
 
 private:
@@ -140,15 +130,6 @@ inline bool Position::is_repeat() const
 #define IsRepetition(margin, move)                                                                                     \
 	((margin) > 0 && Current->ply >= 2 && (Current - 1)->move == ((To(move) << 6) | From(move)) &&                     \
 	 !(Square(To(move))) && !((move)&0xF000))
-
-#if 0
-template <bool me> void do_move(int move);
-template <bool me> void undo_move(int move);
-void do_null();
-void undo_null();
-template <bool me> int is_legal(int move);
-template <bool me> int is_check(int move);
-#endif
 
 extern Position root_pos;
 extern GBoard Board[1];

@@ -31,10 +31,6 @@ This software is released under the MIT License, see "LICENSE.txt".
 #define TimeRatio 120	// ToDo: この数値の意味は？
 #define PonderRatio 120	// ToDo: この数値の意味は？
 
-///namespace {
-///	Position root_pos;
-///}
-
 // オプションの種類.
 // check      false/true
 // spin       数値
@@ -236,9 +232,6 @@ namespace {
 				ptr += 13;
 				if (ptr[0] == 't') Ponder = 1;
 				else Ponder = 0;
-///			} else if (!memcmp(ptr,"Clear",5)) {
-///				init_search(1);
-///				break;
 			} else if (!memcmp(ptr,"PV",2)) {
 				ptr += 14;
 				if (ptr[0] == 't') PVHashing = 1;
@@ -257,7 +250,6 @@ namespace {
 		// (1) position startpos [moves <move1> <movei>]
 		// (2) position sfen <sfen string> [moves <move1> <movei>]
 		// ToDo:
-///		if (!(Searching)) get_position(mstring);
 		iss >> token;
 		if (token == "startpos") {
 			sfen = StartSFEN;
@@ -379,7 +371,6 @@ namespace {
 		}
 	    InfoTime = StartTime = get_time();
 		Searching = 1;
-///		if (MaxPrN > 1) SET_BIT_64(Smpi->searching, 0);
 		if (!(Infinite)) PVN = 1;
 		if (pos.cur_turn() == White) root<0>(); else root<1>();
 	}
@@ -404,7 +395,6 @@ void USI::loop(int argc, char** argv)
 {
 	std::string line;
 	std::string cmd, param;
-///	Position root_pos;
 
 	while (--argc) {
 		line += *++argv;
@@ -426,18 +416,6 @@ void USI::loop(int argc, char** argv)
 			sync_cout;
 			std::cout << options;
 			std::cout << "usiok" << sync_endl;
-#if 0
-			sync_cout << "option name Ponder type check default false\n"
-			          << "option name Hash type spin min 64 max 8192 default 64\n"
-			          << "option name Threads type spin min 1 max 32 default 1\n"
-			          << "option name MultiPV type spin min 1 max 16 default 1\n"
-			          << "option name PV_Hash type check default true\n"
-			          << "option name Aspiration window type check default true\n"
-			          << "option name UseBook type check default true\n"
-			          << "option name BookFile type string default book_40.jsk\n"
-			          << "usiok" << sync_endl;
-#endif
-///			if (!(Searching)) init_search(root_pos, 1);
 		} else if (cmd == "isready") {
 			// 時間がかかる初期化はここで行う.
 			// ToDo: 評価ベクトルの読み込み.

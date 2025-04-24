@@ -299,19 +299,6 @@ extern int PrN, CPUs, parent, Id, ResetHash, NewPrN;
 #define Sa(x, y) Av(x, 0, 0, y)
 #define Ca(x, y) Compose(Av(x, 0, 0, ((y)*2)), Av(x, 0, 0, ((y)*2) + 1))
 
-// Memo: L783
-#if 0
-extern int PasserGeneral[8];
-extern int PasserBlocked[8];
-extern int PasserFree[8];
-extern int PasserSupported[8];
-extern int PasserProtected[8];
-extern int PasserConnected[8];
-extern int PasserOutside[8];
-extern int PasserCandidate[8];
-extern int PasserClear[8];
-#endif
-
 //
 void move_to_string(int move, char string[]);
 int move_from_string(const char string[]);

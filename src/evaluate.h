@@ -18,17 +18,6 @@ extern int16_t Delta[16 * 4096];
 #define DeltaScore(piece, from, to) Delta[((piece) << 12) | ((from) << 6) | (to)]
 #define Delta(from, to) DeltaScore(Square(from), from, to)
 #define DeltaM(move) Delta(From(move), To(move))
-#if 0
-#define UpdateDelta                                                                                                    \
-	if (F(Current->capture) && T(Current->move) && F(Current->move & 0xE000) && Current > Data) {                      \
-		if (DeltaScore(Current->piece, From(Current->move), To(Current->move)) <=                                      \
-		    -Current->score - ((Current - 1)->score))                                                                  \
-			DeltaScore(Current->piece, From(Current->move), To(Current->move)) =                                       \
-			    -Current->score - ((Current - 1)->score);                                                              \
-		else                                                                                                           \
-			DeltaScore(Current->piece, From(Current->move), To(Current->move))--;                                      \
-	}
-#endif
 #define DeltaMarginP(piece, from, to) (DeltaScore(piece, from, to) >= Current->margin)
 #define DeltaMargin(from, to) (Delta(from, to) >= Current->margin)
 

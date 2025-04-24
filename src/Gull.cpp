@@ -1,15 +1,7 @@
-﻿///#define W32_BUILD
-///#undef W32_BUILD
-
-#ifdef W32_BUILD
+﻿#ifdef W32_BUILD
 #define NTDDI_VERSION 0x05010200
 #define _WIN32_WINNT 0x0501
 #endif
-
-///#ifndef W32_BUILD
-///#define HNI
-///#undef HNI
-///#endif
 
 #include <cinttypes>
 #include <cmath>
@@ -36,29 +28,7 @@
 #include "usi.h"
 #include "bbtables.h"
 
-///#define MP_NPS	// --> search.cpp
-/////#undef MP_NPS
-
-///#define TIME_TO_DEPTH
-/////#undef TIME_TO_DEPTH
-
 using namespace std;
-
-#if 0 // ToDo: DEL
-constexpr uint8_t UpdateCastling[64] =
-{
-    0xFF^CanCastle_OOO,0xFF,0xFF,0xFF,0xFF^(CanCastle_OO|CanCastle_OOO),
-        0xFF,0xFF,0xFF^CanCastle_OO,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-    0xFF^CanCastle_ooo,0xFF,0xFF,0xFF,0xFF^(CanCastle_oo|CanCastle_ooo),
-        0xFF,0xFF,0xFF^CanCastle_oo
-};
-#endif
 
 const uint64_t BMagic[64] = {
     0x0048610528020080, 0x00c4100212410004, 0x0004180181002010, 0x0004040188108502, 0x0012021008003040,
@@ -112,13 +82,6 @@ const int32_t ROffset[64] = {5248,  9344,  11392, 13440, 15488, 17536, 19584, 21
 uint64_t *BOffsetPointer[64];
 uint64_t *ROffsetPointer[64];
 
-#define FlagUnusualMaterial (1 << 30)
-
-#if 0 // Memo
-const int MatCode[16] = {0,0,MatWP,MatBP,MatWN,MatBN,MatWL,MatBL,MatWD,MatBD,MatWR,MatBR,MatWQ,MatBQ,0,0};
-const uint64_t File[8] = {FileA,FileA<<1,FileA<<2,FileA<<3,FileA<<4,FileA<<5,FileA<<6,FileA<<7};
-const uint64_t Line[8] = {Line0,(Line0<<8),(Line0<<16),(Line0<<24),(Line0<<32),(Line0<<40),(Line0<<48),(Line0<<56)};
-#endif
 
 /*
 general move:
@@ -132,31 +95,16 @@ delta move:
 12 - 15: flags
 16 - 31: int16_t delta + (int16_t)0x4000
 */
-/// const int MvvLvaVictim[16] = {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 3, 3};
 const int MvvLvaAttacker[16] = {0, 0, 5, 5, 4, 4, 3, 3, 3, 3, 2, 2, 1, 1, 6, 6};
 const int MvvLvaAttackerKB[16] = {0, 0, 9, 9, 7, 7, 5, 5, 5, 5, 3, 3, 1, 1, 11, 11};
 #define PawnCaptureMvvLva(attacker) (MvvLvaAttacker[attacker])
 #define MaxPawnCaptureMvvLva (MvvLvaAttacker[15]) // 6
 #define KnightCaptureMvvLva(attacker) (MaxPawnCaptureMvvLva + MvvLvaAttackerKB[attacker])
-#define MaxKnightCaptureMvvLva (MaxPawnCaptureMvvLva + MvvLvaAttackerKB[15]) // 17
 #define BishopCaptureMvvLva(attacker) (MaxPawnCaptureMvvLva + MvvLvaAttackerKB[attacker] + 1)
 #define MaxBishopCaptureMvvLva (MaxPawnCaptureMvvLva + MvvLvaAttackerKB[15] + 1) // 18
 #define RookCaptureMvvLva(attacker) (MaxBishopCaptureMvvLva + MvvLvaAttacker[attacker])
 #define MaxRookCaptureMvvLva (MaxBishopCaptureMvvLva + MvvLvaAttacker[15]) // 24
 #define QueenCaptureMvvLva(attacker) (MaxRookCaptureMvvLva + MvvLvaAttacker[attacker])
-
-#if 0
-#define halt_check                                                                                                     \
-	if ((Current - Data) >= 126) {                                                                                     \
-		evaluate();                                                                                                    \
-		return Current->score;                                                                                         \
-	}                                                                                                                  \
-	if (Current->ply >= 100)                                                                                           \
-		return 0;                                                                                                      \
-	for (i = 4; i <= Current->ply; i += 2)                                                                             \
-		if (Stack[sp - i] == Current->key)                                                                             \
-	return 0
-#endif
 
 alignas(64) GBoard Board[1];
 uint64_t Stack[2048];
@@ -168,43 +116,14 @@ GData *Current = Data;
 
 int RootList[256];
 
-///#define prefetch(a,mode) _mm_prefetch(a,mode)
-
-/// uint64_t * MagicAttacks;
-/// GMaterial * Material;
 bitboard_t MagicAttacks[magic_size];
 GMaterial Material[TotalMat];
-///#define FlagSingleBishop_w (1 << 0)
-///#define FlagSingleBishop_b (1 << 1)
-///#define FlagCallEvalEndgame_w (1 << 2)
-///#define FlagCallEvalEndgame_b (1 << 3)
 
 uint64_t TurnKey;
 uint64_t PieceKey[16][64];
 uint16_t date;
 
 bitboard_t Kpk[2][64][64];
-
-#if 0 // ToDo: DEL
-int16_t History[16 * 64];
-#define HistoryScore(piece, from, to) History[((piece) << 6) | (to)]
-#define HistoryP(piece, from, to)                                                                                      \
-	((Convert(HistoryScore(piece, from, to) & 0xFF00, int) / Convert(HistoryScore(piece, from, to) & 0x00FF, int))     \
-	 << 16)
-#define History(from, to) HistoryP(Square(from), from, to)
-#define HistoryM(move) HistoryScore(Square(From(move)), From(move), To(move))
-#define HistoryInc(depth) std::min(((depth) >> 1) * ((depth) >> 1), 64)
-#define HistoryGood(move)                                                                                              \
-	if ((HistoryM(move) & 0x00FF) >= 256 - HistoryInc(depth))                                                          \
-		HistoryM(move) = ((HistoryM(move) & 0xFEFE) >> 1) + ((HistoryInc(depth) << 8) | HistoryInc(depth));            \
-	else                                                                                                               \
-		HistoryM(move) += ((HistoryInc(depth) << 8) | HistoryInc(depth))
-#define HistoryBad(move)                                                                                               \
-	if ((HistoryM(move) & 0x00FF) >= 256 - HistoryInc(depth))                                                          \
-		HistoryM(move) = ((HistoryM(move) & 0xFEFE) >> 1) + HistoryInc(depth);                                         \
-	else                                                                                                               \
-		HistoryM(move) += HistoryInc(depth)
-#endif
 
 GRef Ref[16 * 64];
 
@@ -242,13 +161,7 @@ HANDLE StreamHandle;
 
 // EVAL
 
-const int8_t DistC[8] = {3, 2, 1, 0, 0, 1, 2, 3};
-const int8_t RankR[8] = {-3, -2, -1, 0, 1, 2, 3, 4};
-
-/// const int SeeValue[16] = {0, 0, 90, 90, 325, 325, 325, 325, 325, 325, 510, 510, 975, 975, 30000, 30000};
 const int PieceType[16] = {0, 0, 0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 4, 4, 5, 5};
-
-#define V(x) (x)
 
 // EVAL WEIGHTS
 
@@ -307,18 +220,6 @@ enum { MatRB, MatRN, MatQRR, MatQRB, MatQRN, MatQ3, MatBBR, MatBNR, MatNNR, MatM
 const int MatSpecial[20] = { // tuner: type=array, var=30, active=0
     13, -13, 10, -9, 8, 12, 4, 6, 5, 9, -3, -8, -4, 7, 2, 0, 0, -6, 1, 3};
 
-// piece type (6) * direction (4: h center dist, v center dist, diag dist, rank) * phase (2)
-const int PstQuadWeights[48] = { // tuner: type=array, var=100, active=0
-    -15, -19, -70, -13, 33, -20, 0,  197, -36, -122, 0,  -60, -8, -3, -17, -28, -27, -63, -17,  -7,  14, 0,   -24, -5,
-    -64, -2,  0,   -38, -8, 0,   77, 11,  -67, 3,    -4, -92, -2, 12, -13, -42, -62, -84, -175, -42, -2, -17, 40,  -19};
-const int PstLinearWeights[48] = { // tuner: type=array, var=500, active=0
-    -107, 67,   -115, 83,   -55, 67,  92,   443, -177, 5,    -82, -61,  -106, -104, 273, 130,
-    0,    -145, -105, -58,  -99, -37, -133, 14,  -185, -43,  -67, -53,  53,   -65,  174, 134,
-    -129, 7,    98,   -231, 107, -40, -27,  311, 256,  -117, 813, -181, 2,    -215, -44, 344};
-// piece type (6) * type (2: h * v, h * rank) * phase (2)
-const int PstQuadMixedWeights[24] = { // tuner: type=array, var=100, active=0
-    14, -6, 1, -4, -8, -2, 4, -4, 1, -7, -12, 0, -2, -1, -5, 4, 5, -10, 0, 4, -2, 5, 4, -2};
-
 // tuner: stop
 
 // END EVAL WEIGHTS
@@ -327,12 +228,6 @@ const int PstQuadMixedWeights[24] = { // tuner: type=array, var=100, active=0
 
 int PrN = 1, CPUs = 1, HT = 0, parent = 1, child = 0, WinParId, Id = 0, ResetHash = 1, NewPrN = 0;
 HANDLE ChildPr[MaxPrN];
-///#define FlagClaimed (1 << 1)
-///#define FlagFinished (1 << 2)
-
-/// GSMPI * Smpi;
-
-/// jmp_buf CheckJump;
 
 HANDLE SHARED = NULL, HASH = NULL;
 
@@ -626,14 +521,14 @@ void init_misc()
 	PieceFromChar['r'] = 11;
 
 	TurnKey = rand64();
-	for (i = 0; i < 16; i++)
+	for (i = 0; i < 16; i++) {
 		for (j = 0; j < 64; j++) {
 			if (i == 0)
 				PieceKey[i][j] = 0;
 			else
 				PieceKey[i][j] = rand64();
 		}
-	///	for (i = 0; i < 16; i++) LogDist[i] = (int)(10.0 * log(1.01 + (double)i));
+	}
 }
 
 void init_magic()
@@ -1032,7 +927,6 @@ void init_material()
 
 void init()
 {
-	///	init_shared();
 	init_misc();
 	if (parent)
 		init_magic();
@@ -1077,55 +971,6 @@ int move_from_string(const char string[])
 	}
 	return move;
 }
-
-// -->search.cpp
-////void pick_pv()
-////template <bool me> int draw_in_pv()
-
-// -->position.cpp
-////template <bool me> void do_move(int move)
-////template <bool me> void undo_move(int move)
-////void do_null()
-////void undo_null()
-////template <bool me> int is_legal(int move)
-////template <bool me> int is_check(int move)  // doesn't detect castling and ep checks
-
-// -->search.cpp
-////void hash_high(int value, int depth)
-////void hash_low(int move, int value, int depth)
-////void hash_exact(int move, int value, int depth, int exclusion, int ex_depth, int knodes)
-////template <bool pv> __forceinline int extension(int move, int depth)
-
-// -->genmove.cpp
-////void sort(int * start, int * finish)
-
-// -->search.cpp
-////void sort_moves(int * start, int * finish)
-
-// -->genmove.cpp
-////__forceinline int pick_move()
-////template <bool me> void gen_next_moves()
-////template <bool me, bool root> int get_move()
-////template <bool me> int see(int move, int margin)
-////template <bool me> void gen_root_moves()
-////template <bool me> int * gen_captures(int * list)
-////template <bool me> int * gen_evasions(int * list)
-////void mark_evasions(int * list)
-////template <bool me> int * gen_quiet_moves(int * list)
-////template <bool me> int * gen_checks(int * list)
-////template <bool me> int * gen_delta_moves(int * list)
-
-// -->search.cpp
-////template <bool me> int singular_extension(int ext, int prev_ext, int margin_one, int margin_two, int depth, int
-/// killer) /template <bool me> __forceinline void capture_margin(int alpha, int &score) /template <bool me, bool pv>
-/// int q_search(int alpha, int beta, int depth, int flags) /template <bool me, bool pv> int q_evasion(int alpha, int
-/// beta, int depth, int flags) /void send_position(GPos * Pos) /void retrieve_board(GPos * Pos) /void
-/// retrieve_position(GPos * Pos, int copy_stack) /void halt_all(GSP * Sp, int locked) /void halt_all(int from, int to)
-/// /void init_sp(GSP * Sp, int alpha, int beta, int depth, int pv, int singular, int height) /template <bool me> int
-/// smp_search(GSP * Sp) /template <bool me, bool exclusion> int search(int beta, int depth, int flags) /template <bool
-/// me, bool exclusion> int search_evasion(int beta, int depth, int flags) /template <bool me, bool root> int
-/// pv_search(int alpha, int beta, int depth, int flags) /template <bool me> void root() /template <bool me> int
-/// multipv(int depth) /void send_pv(int depth, int alpha, int beta, int score) /void send_best_move()
 
 void get_position(char string[])
 {

@@ -76,19 +76,4 @@ public:	// ToDo: privateで動くようにする.
 	int moves[MAX_MOVES];
 };
 
-
-// Memo: L819
-#if 0
-int pick_move();
-template <bool me, bool root> int get_move();
-template <bool me> int see(int move, int margin);
-///template <bool me> void gen_root_moves();
-template <bool me> int * gen_captures(int * list);
-template <bool me> int * gen_evasions(int * list);
-void mark_evasions(int * list);
-template <bool me> int * gen_quiet_moves(int * list);
-template <bool me> int * gen_checks(int * list);
-template <bool me> int * gen_delta_moves(int * list);
-#endif
-
 #endif
