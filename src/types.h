@@ -63,7 +63,6 @@ constexpr int make_sq(int rank, int file)
 #define SDiag(x) (file_of(x) + rank_of(x))
 #define Dist(x, y) std::max(std::abs(rank_of(x) - rank_of(y)), std::abs(file_of(x) - file_of(y)))
 #define VarC(var, me) ((me) ? (var##_b) : (var##_w))
-#define PVarC(prefix, var, me) ((me) ? (prefix.var##_b) : (prefix.var##_w))
 inline void Cut(uint64_t &x) { x &= (x - 1); }
 constexpr bool Multiple(int x) { return ((x) & ((x)-1)) != 0; }
 constexpr bool Single(int x) { return ((x) & ((x)-1)) == 0; }
@@ -207,7 +206,6 @@ constexpr int Dir(bool me) { return ((me) ? (-1) : (1)); }
 #define IncV(var, x) (me ? (var -= (x)) : (var += (x)))
 #define DecV(var, x) IncV(var, -(x))
 
-#define KpkValue 300
 #define EvalValue 30000
 #define MateValue 32760
 
@@ -246,7 +244,7 @@ struct GMaterial {
 	uint8_t phase, flags;
 	uint8_t mul[2], pieces[2];
 };
-extern GMaterial Material[];
+///extern GMaterial Material[];
 #define FlagSingleBishop_w (1 << 0)
 #define FlagSingleBishop_b (1 << 1)
 #define FlagCallEvalEndgame_w (1 << 2)
@@ -296,7 +294,6 @@ extern int PrN, CPUs, parent, Id, ResetHash, NewPrN;
 #define Av(x, width, row, column) (*((x) + ArrayIndex(width, row, column)))
 #define TrAv(x, w, r, c) Av(x, 0, 0, (((r) * (2 * (w) - (r) + 1)) / 2) + (c))
 
-#define Sa(x, y) Av(x, 0, 0, y)
 #define Ca(x, y) Compose(Av(x, 0, 0, ((y)*2)), Av(x, 0, 0, ((y)*2) + 1))
 
 //
